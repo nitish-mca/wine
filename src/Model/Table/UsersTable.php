@@ -110,8 +110,7 @@ class UsersTable extends Table
 
         $validator
             ->boolean('status')
-            ->requirePresence('status', 'create')
-            ->notEmpty('status');
+            ->allowEmpty('status');
 
         return $validator;
     }

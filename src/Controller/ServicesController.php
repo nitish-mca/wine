@@ -20,7 +20,41 @@ class ServicesController extends AppController {
     public function beforeFilter(Event $event) {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
-        $this->Auth->allow(['getcategories', 'getsubcategories', 'getofferslist', 'getofferdetails', 'addsubsricption', 'addsuggestions', 'listoffers']);
+        $this->Auth->allow(['login', 'signup','getcategories', 'getsubcategories', 'getofferslist', 'getofferdetails', 'addsubsricption', 'addsuggestions', 'listoffers']);
+    }
+
+    public function login() {
+        $msg = array('msg' => 'Please enter your username and password.', 'success' => false, 'error' => true);
+        if ($this->request->is('post')) {
+            $user = $this->Auth->identify();
+            if ($user) {
+                $this->Auth->setUser($user);
+                $msg = array('msg' => 'Login Successful.', 'success' => true, 'error' => false);
+                //return $this->redirect($this->Auth->redirectUrl());
+
+               // $this->Flash->error(__('Invalid username or password, try again'));
+            }else{
+                $msg = array('msg' => 'Login Failed. Wrong Username or Password', 'success' => false, 'error' => true);
+            }
+        }
+        echo json_encode($msg);
+        die;
+    }
+    
+    public function signup(){
+        $msg = array('msg' => 'Please fill up form.', 'success' => false, 'error' => true);
+        $this->loadModel('Users');
+        $user = $this->Users->newEntity();
+        if ($this->request->is('post')) {
+            $user = $this->Users->patchEntity($user, $this->request->data);
+            if ($this->Users->save($user)) {
+                $msg = array('msg' => 'New User Add Successfully.', 'success' => true, 'error' => false);
+            } else {
+                $msg = array('msg' => 'Error.', 'success' => false, 'error' => true);
+            }
+        }
+        echo json_encode($msg);
+        die;
     }
 
     public function index() {
