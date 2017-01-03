@@ -44,7 +44,6 @@ class ServicesController extends AppController {
         $this->loadModel('Users');
         $user = $this->Users->newEntity();
         if ($this->request->is('post')) {
-            $user = $this->Auth->identify();
             $user = $this->Users->patchEntity($user, $this->request->data);
             if ($this->Users->save($user)) {
                 $msg = array('msg' => 'New User Add Successfully.', 'success' => true, 'error' => false);
