@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Controller\AppController;
 use Cake\Event\Event;
+use Cake\Mailer\Email;
 
 /**
  * Categories Controller
@@ -20,7 +21,7 @@ class ServicesController extends AppController {
     public function beforeFilter(Event $event) {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
-        $this->Auth->allow(['login', 'signup','getcategories', 'getsubcategories', 'getofferslist', 'getofferdetails', 'addsubsricption', 'addsuggestions', 'listoffers']);
+        $this->Auth->allow(['login', 'signup', 'getcategories', 'getsubcategories', 'getofferslist', 'getofferdetails', 'addsubsricption', 'addsuggestions', 'listoffers']);
     }
 
     public function login() {
@@ -30,28 +31,91 @@ class ServicesController extends AppController {
             if ($user) {
                 $this->Auth->setUser($user);
                 $msg = array('msg' => 'Login Successful.', 'success' => true, 'error' => false);
-                //return $this->redirect($this->Auth->redirectUrl());
-
-               // $this->Flash->error(__('Invalid username or password, try again'));
-            }else{
+            } else {
                 $msg = array('msg' => 'Login Failed. Wrong Username or Password', 'success' => false, 'error' => true);
             }
         }
         echo json_encode($msg);
         die;
     }
-    
-    public function signup(){
+
+    public function signup() {
         $msg = array('msg' => 'Please fill up form.', 'success' => false, 'error' => true);
         $this->loadModel('Users');
         $user = $this->Users->newEntity();
         if ($this->request->is('post')) {
+            $user = $this->Auth->identify();
             $user = $this->Users->patchEntity($user, $this->request->data);
             if ($this->Users->save($user)) {
                 $msg = array('msg' => 'New User Add Successfully.', 'success' => true, 'error' => false);
             } else {
                 $msg = array('msg' => 'Error.', 'success' => false, 'error' => true);
             }
+        }
+        echo json_encode($msg);
+        die;
+    }
+
+    public function forgotpassword() {
+        $msg = array('msg' => 'Please enter username.', 'success' => false, 'error' => true);
+        if ($this->request->is(['patch', 'post', 'put'])) {
+            $userData = $this->Users->find()
+                            ->where(['Users.username' => $this->request->data['username']])
+                            ->contain([])->toArray();
+            if (!empty($userData)) {
+                $user = $this->Users->get($userData[0]->id, [
+                    'contain' => []
+                ]);
+                $tokenString = $userData[0]->id . '_' . time() . '_' . rand();
+                $user = $this->Users->patchEntity($user, $this->request->data);
+                $user->password_token = base64_encode($tokenString);
+                if ($this->Users->save($user)) {
+                    $email = new Email('gmail');
+                    $url = '';
+                    $email->from(['admin@wineshop.net' => 'WineShop Admin'])
+                            ->to($userData[0]->email)
+                            ->subject('Change password')
+                            ->send('My message');
+                    $msg = array('msg' => 'Password instruction has been sent. Please check your email.', 'success' => true, 'error' => false);
+                } else {
+                    $msg = array('msg' => 'Password instruction couldnot be sent. Please, try again.', 'success' => false, 'error' => true);
+                }
+            } else {
+                $msg = array('msg' => 'Username not found.', 'success' => false, 'error' => true);
+            }
+        }
+        echo json_encode($msg);
+        die;
+    }
+
+    public function changepassword($token) {
+        $msg = array('msg' => 'Please enter username.', 'success' => false, 'error' => true);
+        $userData = $this->Users->find()
+                        ->where(['Users.password_token' => $token])
+                        ->contain([])->toArray();
+        if (!empty($userData)) {
+            if ($this->request->is(['patch', 'post', 'put'])) {
+                $user = $this->Users->get($userData[0]->id, [
+                    'contain' => []
+                ]);
+
+                if ($this->request->data['password'] === $this->request->data['confirm_password']) {
+                    $this->request->data['password_token'] = '';
+                    $user = $this->Users->patchEntity($user, $this->request->data);
+
+                    if ($this->Users->save($user)) {
+                        $msg = array('msg' => 'The password has been updated.', 'success' => true, 'error' => false);
+                    } else {
+                        $msg = array('msg' => 'The password could not be changed. Please, try again.', 'success' => false, 'error' => true);
+                    }
+                } else {
+                    $msg = array('msg' => 'The password and confirm password not matched. Please try again.', 'success' => false, 'error' => true);
+                }
+            } else {
+                $msg = array('msg' => 'The enter password.', 'success' => false, 'error' => true);
+            }
+        } else {
+            $msg = array('msg' => 'Invalid or Expired token.', 'success' => false, 'error' => true);
         }
         echo json_encode($msg);
         die;

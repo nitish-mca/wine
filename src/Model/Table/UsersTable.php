@@ -87,7 +87,7 @@ class UsersTable extends Table
 
         $validator
             ->email('email')
-            ->allowEmpty('email');
+            ->notEmpty('email');
 
         $validator
             ->allowEmpty('phone');
