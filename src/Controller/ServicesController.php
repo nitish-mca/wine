@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Controller\AppController;
 use Cake\Event\Event;
 use Cake\Mailer\Email;
+use Cake\Routing\Router;
 
 /**
  * Categories Controller
@@ -21,7 +22,8 @@ class ServicesController extends AppController {
     public function beforeFilter(Event $event) {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
-        $this->Auth->allow(['login', 'signup', 'getcategories', 'getsubcategories', 'getofferslist', 'getofferdetails', 'addsubsricption', 'addsuggestions', 'listoffers']);
+        $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword',
+            'getsubcategories', 'getofferslist', 'getofferdetails', 'addsubsricption', 'addsuggestions', 'listoffers']);
     }
 
     public function login() {
@@ -57,24 +59,31 @@ class ServicesController extends AppController {
 
     public function forgotpassword() {
         $msg = array('msg' => 'Please enter username.', 'success' => false, 'error' => true);
+        $this->loadModel('Users');
         if ($this->request->is(['patch', 'post', 'put'])) {
             $userData = $this->Users->find()
                             ->where(['Users.username' => $this->request->data['username']])
                             ->contain([])->toArray();
             if (!empty($userData)) {
+
                 $user = $this->Users->get($userData[0]->id, [
                     'contain' => []
                 ]);
+                $name = $userData[0]->name;
+                
                 $tokenString = $userData[0]->id . '_' . time() . '_' . rand();
                 $user = $this->Users->patchEntity($user, $this->request->data);
                 $user->password_token = base64_encode($tokenString);
                 if ($this->Users->save($user)) {
-                    $email = new Email('gmail');
-                    $url = '';
-                    $email->from(['admin@wineshop.net' => 'WineShop Admin'])
+                    $url = Router::url(['controller' => 'users', 'action' => 'changepassword', $user->password_token], true);
+                    $msg = "Dear ".$name.", <br/> We have recieved request for change your password for our portal. Please click on following link for update it.<br/> ". $url;
+                    $email = new Email('default');
+                    $email->from(['admin@wineshop.net' => 'Wineshop'])
                             ->to($userData[0]->email)
-                            ->subject('Change password')
-                            ->send('My message');
+                            ->subject('Request for change password')
+                            ->emailFormat('html')
+                            ->send($msg);
+
                     $msg = array('msg' => 'Password instruction has been sent. Please check your email.', 'success' => true, 'error' => false);
                 } else {
                     $msg = array('msg' => 'Password instruction couldnot be sent. Please, try again.', 'success' => false, 'error' => true);
@@ -89,6 +98,7 @@ class ServicesController extends AppController {
 
     public function changepassword($token) {
         $msg = array('msg' => 'Please enter username.', 'success' => false, 'error' => true);
+        $this->loadModel('Users');
         $userData = $this->Users->find()
                         ->where(['Users.password_token' => $token])
                         ->contain([])->toArray();
@@ -117,6 +127,27 @@ class ServicesController extends AppController {
             $msg = array('msg' => 'Invalid or Expired token.', 'success' => false, 'error' => true);
         }
         echo json_encode($msg);
+        die;
+    }
+
+    public function checkemail() {
+        echo $url = Router::url(
+                ['controller' => 'services', 'action' => 'changepassword', 'test'], true
+        );
+        
+        die;
+//        Email::configTransport('gmail', [
+//            'host' => 'ssl://smtp.gmail.com',
+//            'port' => 465,
+//            'username' => '4nitish.kumar@gmail.com',
+//            'password' => 'Shut-Upp',
+//            'className' => 'Smtp'
+//        ]);
+        $email = new Email('default');
+        $email->from(['admin@wineshop.net' => 'Wineshop'])
+                ->to('nitish.mca@outlook.com')
+                ->subject('Test Mail')
+                ->send('My message');
         die;
     }
 
