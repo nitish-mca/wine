@@ -19,7 +19,7 @@ class WinesController extends AppController
     public function index()
     {
         $this->paginate = [
-            'contain' => ['Categories', 'Users']
+            'contain' => ['Users']
         ];
         $wines = $this->paginate($this->Wines);
 
@@ -37,7 +37,7 @@ class WinesController extends AppController
     public function view($id = null)
     {
         $wine = $this->Wines->get($id, [
-            'contain' => ['Categories', 'Users', 'FaviorateWines', 'WineIngredients']
+            'contain' => ['Users']
         ]);
 
         $this->set('wine', $wine);
@@ -54,6 +54,8 @@ class WinesController extends AppController
         $wine = $this->Wines->newEntity();
         if ($this->request->is('post')) {
             $wine = $this->Wines->patchEntity($wine, $this->request->data);
+            $wine->user_id = $this->Auth->user('id');
+            
             if(isset($wine->photo['name'])){
                 $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
                 $filename = basename($wine->photo['name'], ".$ext");
@@ -68,7 +70,6 @@ class WinesController extends AppController
                 $this->Flash->error(__('The wine could not be saved. Please, try again.'));
             }
         }
-        $categories = $this->Wines->Categories->find('list', ['limit' => 200]);
         $users = $this->Wines->Users->find('list', ['limit' => 200]);
         $this->set(compact('wine', 'categories', 'users'));
         $this->set('_serialize', ['wine']);
@@ -102,8 +103,7 @@ class WinesController extends AppController
                 $this->Flash->error(__('The wine could not be saved. Please, try again.'));
             }
         }
-        $categories = $this->Wines->Categories->find('list', ['limit' => 200]);
-        $users = $this->Wines->Users->find('list', ['limit' => 200]);
+        
         $this->set(compact('wine', 'categories', 'users'));
         $this->set('_serialize', ['wine']);
     }

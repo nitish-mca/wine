@@ -10,7 +10,6 @@
         <legend><?= __('Add Wine') ?></legend>
         <?php
             echo $this->Form->input('title');
-            echo $this->Form->input('category_id', ['options' => $categories]);
             echo $this->Form->input('photo', ['type' => 'file']);
             echo $this->Form->input('description');
             echo $this->Form->input('status');

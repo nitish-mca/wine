@@ -136,13 +136,6 @@ class ServicesController extends AppController {
         );
         
         die;
-//        Email::configTransport('gmail', [
-//            'host' => 'ssl://smtp.gmail.com',
-//            'port' => 465,
-//            'username' => '4nitish.kumar@gmail.com',
-//            'password' => 'Shut-Upp',
-//            'className' => 'Smtp'
-//        ]);
         $email = new Email('default');
         $email->from(['admin@wineshop.net' => 'Wineshop'])
                 ->to('nitish.mca@outlook.com')
@@ -160,17 +153,24 @@ class ServicesController extends AppController {
 
     public function getcategories($id = NULL) {
         $this->loadModel('Categories');
+        $Categories = $this->Categories;
         if (!empty($id)) {
             $categories = $this->Categories->find()
-                    ->contain(['Ingredients'])
+                    ->select(['id', 'title'])                  
+                    ->contain(['Ingredients' => function($q) {
+                            return $q->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
+                    }])
                     ->where(['Categories.id' => $id])
                     ->limit(25)
                     ->order('Categories.id ASC')
                     ->toArray();
         } else {
-            $categories = $this->Categories->find()
-                    ->contain(['Ingredients'])
-                    ->limit(25)
+            $categories = $Categories->find()
+                    ->select(['id', 'title'])                  
+                    ->contain(['Ingredients' => function($q) {
+                            return $q->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
+                    }])
+                    ->limit(25)                    
                     ->order('Categories.id ASC')
                     ->toArray();
         }
@@ -183,12 +183,19 @@ class ServicesController extends AppController {
         if (!empty($category_id)) {
             $ingredients = $this->Ingredients->find()
                     ->limit(25)
+                    ->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"])
+                    ->contain(['Categories' => function ($q){
+                        return $q->select(['id', 'title']);
+                    }])
                     ->where(['Ingredients.category_id' => $category_id])
                     ->order('Ingredients.id');
         } else {
             $ingredients = $this->Ingredients->find()
                     ->limit(25)
-                    ->contain(['Categories'])
+                    ->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"])
+                    ->contain(['Categories' => function ($q){
+                        return $q->select(['id', 'title']);
+                    }])
                     ->order('Ingredients.id');
         }
 

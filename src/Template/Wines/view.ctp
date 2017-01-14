@@ -5,14 +5,6 @@
         <li><?= $this->Form->postLink(__('Delete Wine'), ['action' => 'delete', $wine->id], ['confirm' => __('Are you sure you want to delete # {0}?', $wine->id)]) ?> </li>
         <li><?= $this->Html->link(__('List Wines'), ['action' => 'index']) ?> </li>
         <li><?= $this->Html->link(__('New Wine'), ['action' => 'add']) ?> </li>
-        <li><?= $this->Html->link(__('List Categories'), ['controller' => 'Categories', 'action' => 'index']) ?> </li>
-        <li><?= $this->Html->link(__('New Category'), ['controller' => 'Categories', 'action' => 'add']) ?> </li>
-        <li><?= $this->Html->link(__('List Users'), ['controller' => 'Users', 'action' => 'index']) ?> </li>
-        <li><?= $this->Html->link(__('New User'), ['controller' => 'Users', 'action' => 'add']) ?> </li>
-        <li><?= $this->Html->link(__('List Faviorate Wines'), ['controller' => 'FaviorateWines', 'action' => 'index']) ?> </li>
-        <li><?= $this->Html->link(__('New Faviorate Wine'), ['controller' => 'FaviorateWines', 'action' => 'add']) ?> </li>
-        <li><?= $this->Html->link(__('List Wine Ingredients'), ['controller' => 'WineIngredients', 'action' => 'index']) ?> </li>
-        <li><?= $this->Html->link(__('New Wine Ingredient'), ['controller' => 'WineIngredients', 'action' => 'add']) ?> </li>
     </ul>
 </nav>
 <div class="wines view large-9 medium-8 columns content">
@@ -21,10 +13,6 @@
         <tr>
             <th scope="row"><?= __('Title') ?></th>
             <td><?= h($wine->title) ?></td>
-        </tr>
-        <tr>
-            <th scope="row"><?= __('Category') ?></th>
-            <td><?= $wine->has('category') ? $this->Html->link($wine->category->title, ['controller' => 'Categories', 'action' => 'view', $wine->category->id]) : '' ?></td>
         </tr>
         <tr>
             <th scope="row"><?= __('Photo') ?></th>
@@ -58,33 +46,6 @@
     <div class="row">
         <h4><?= __('Description') ?></h4>
         <?= $this->Text->autoParagraph(h($wine->description)); ?>
-    </div>
-    <div class="related">
-        <h4><?= __('Related Faviorate Wines') ?></h4>
-        <?php if (!empty($wine->faviorate_wines)): ?>
-        <table cellpadding="0" cellspacing="0">
-            <tr>
-                <th scope="col"><?= __('Id') ?></th>
-                <th scope="col"><?= __('Wine Id') ?></th>
-                <th scope="col"><?= __('User Id') ?></th>
-                <th scope="col"><?= __('Status') ?></th>
-                <th scope="col" class="actions"><?= __('Actions') ?></th>
-            </tr>
-            <?php foreach ($wine->faviorate_wines as $faviorateWines): ?>
-            <tr>
-                <td><?= h($faviorateWines->id) ?></td>
-                <td><?= h($faviorateWines->wine_id) ?></td>
-                <td><?= h($faviorateWines->user_id) ?></td>
-                <td><?= h($faviorateWines->status) ?></td>
-                <td class="actions">
-                    <?= $this->Html->link(__('View'), ['controller' => 'FaviorateWines', 'action' => 'view', $faviorateWines->id]) ?>
-                    <?= $this->Html->link(__('Edit'), ['controller' => 'FaviorateWines', 'action' => 'edit', $faviorateWines->id]) ?>
-                    <?= $this->Form->postLink(__('Delete'), ['controller' => 'FaviorateWines', 'action' => 'delete', $faviorateWines->id], ['confirm' => __('Are you sure you want to delete # {0}?', $faviorateWines->id)]) ?>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </table>
-        <?php endif; ?>
     </div>
     <div class="related">
         <h4><?= __('Related Wine Ingredients') ?></h4>

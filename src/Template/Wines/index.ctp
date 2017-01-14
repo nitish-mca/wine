@@ -11,7 +11,6 @@
             <tr>
                 <th scope="col"><?= $this->Paginator->sort('id') ?></th>
                 <th scope="col"><?= $this->Paginator->sort('title') ?></th>
-                <th scope="col"><?= $this->Paginator->sort('category_id') ?></th>
                 <th scope="col"><?= $this->Paginator->sort('status') ?></th>
                 <th scope="col"><?= $this->Paginator->sort('user_id') ?></th>
                 <th scope="col"><?= $this->Paginator->sort('created') ?></th>
@@ -23,7 +22,6 @@
                 <tr>
                     <td><?= $this->Number->format($wine->id) ?></td>
                     <td><?= h($wine->title) ?></td>
-                    <td><?= $wine->has('category') ? $this->Html->link($wine->category->title, ['controller' => 'Categories', 'action' => 'view', $wine->category->id]) : '' ?></td>
                     <td><?= h($wine->status) ?></td>
                     <td><?= $wine->has('user') ? $this->Html->link($wine->user->name, ['controller' => 'Users', 'action' => 'view', $wine->user->id]) : '' ?></td>
                     <td><?= h($wine->created) ?></td>
