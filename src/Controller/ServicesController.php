@@ -128,13 +128,22 @@ class ServicesController extends AppController {
         $this->set('_serialize', ['categories']);
     }
 
-    public function getcategories() {
+    public function getcategories($id = NULL) {
         $this->loadModel('Categories');
-        $categories = $this->Categories->find()
-                ->contain(['Ingredients'])
-                ->limit(25)
-                ->order('Categories.id ASC')
-                ->toArray();
+        if (!empty($id)) {
+            $categories = $this->Categories->find()
+                    ->contain(['Ingredients'])
+                    ->where(['Categories.id' => $id])
+                    ->limit(25)
+                    ->order('Categories.id ASC')
+                    ->toArray();
+        } else {
+            $categories = $this->Categories->find()
+                    ->contain(['Ingredients'])
+                    ->limit(25)
+                    ->order('Categories.id ASC')
+                    ->toArray();
+        }
         echo json_encode($categories);
         die;
     }
