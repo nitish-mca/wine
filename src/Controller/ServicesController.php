@@ -23,7 +23,7 @@ class ServicesController extends AppController {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword',
-            'getingrdientsbycategory', 'getwinelist', 'createwine', 'addsubsricption', 'addsuggestions', 'listoffers']);
+            'getingrdients', 'getwinelist', 'createwine', 'addsubsricption', 'addsuggestions', 'listoffers']);
     }
 
     public function login() {
@@ -171,7 +171,7 @@ class ServicesController extends AppController {
         die;
     }
 
-    public function getingrdientsbycategory($category_id = null) {
+    public function getingrdients($category_id = null) {
         $this->loadModel('Ingredients');
         if (!empty($category_id)) {
             $ingredients = $this->Ingredients->find()
@@ -229,7 +229,7 @@ class ServicesController extends AppController {
                 //return $this->redirect(['action' => 'index']);
             } else {
                 debug($wine->errors());
-                $msg = array('msg' => 'Wine could not been sent. Please try again.', 'success' => false, 'error' => true);
+                $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
             }
         }
         echo json_encode($msg);
