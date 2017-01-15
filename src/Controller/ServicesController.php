@@ -196,9 +196,20 @@ class ServicesController extends AppController {
         die;
     }
 
-    public function getwinelist($user_id = null) {
+    public function getwinelist() {
         $this->loadModel('Wines');
         $winelist = $this->Wines->find()
+                ->select(['id','title', 'description', 'photo', 'dir'])
+                ->contain(['WineIngredients' => function($q){
+                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
+                }, 
+                'WineIngredients.Ingredients' => function($q){
+                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
+                },
+                'WineIngredients.Ingredients.Categories' => function($q){
+                    return $q->select(['id', 'title']);
+                }
+                ])
                 ->limit(25)
                 ->order(['Wines.id ASC']);
 
@@ -210,11 +221,8 @@ class ServicesController extends AppController {
     {
         $this->loadModel('Wines');
         $msg = array('msg' => 'Wine could not been sent. Please try again.', 'success' => false, 'error' => true);
-        
-        //$articlesTable->Comments->newEntity();
         if ($this->request->is('post')) {
             $wine = $this->Wines->newEntity($this->request->data, ['associated' => ['WineIngredients']]);
-           // $wine = $this->Wines->patchEntity($wine, $this->request->data);            
             $wine->user_id = isset($wine->user_id) ? $wine->user_id : 1;
             $wine->status = 1;            
             if(isset($wine->photo['name'])){
