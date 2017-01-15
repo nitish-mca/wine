@@ -163,7 +163,7 @@ class ServicesController extends AppController {
             $categories = $this->Categories->find()
                     ->select(['id', 'title'])
                     ->contain(['Ingredients' => function($q) {
-                            return $q->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
+                            return $q->select(['id','title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
                         }])
                     ->where(['Categories.id' => $id])
                     ->limit(25)
@@ -173,7 +173,7 @@ class ServicesController extends AppController {
             $categories = $Categories->find()
                 ->select(['id', 'title'])
                 ->contain(['Ingredients' => function($q) {
-                        return $q->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
+                        return $q->select(['id','title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
                     }])
                 ->limit(25)
                 ->order('Categories.id ASC')
@@ -214,9 +214,23 @@ class ServicesController extends AppController {
         if ($this->request->is('post')) {
             $ingredient = $this->Ingredients->newEntity($this->request->data, ['associated' => ['Categories']]);
             $ingredient->user_id = isset($ingredient->user_id) ? $ingredient->user_id : 1;
-            $ingredient->status = 1;            
+            $ingredient->status = 1;
            
             if ($this->Ingredients->save($ingredient)) {
+                
+                $data = [
+                    'id' => $ingredient['id'],
+                    'title' => $ingredient['title'],
+                    'size' => $ingredient['size'],
+                    'uom' => $ingredient['uom'],
+                    'cost' => $ingredient['cost'],
+                    'category_id' => $ingredient['category_id'],
+                    'category' => [
+                        'id' => $ingredient['category']->id,
+                        'title' => $ingredient['category']-> title
+                    ]   
+                ];
+                
                 $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false);
             } else {
                 debug($ingredient->errors());
