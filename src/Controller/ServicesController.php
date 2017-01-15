@@ -231,7 +231,7 @@ class ServicesController extends AppController {
                     ]   
                 ];
                 
-                $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false);
+                $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false, 'data' => $data);
             } else {
                 debug($ingredient->errors());
                 $msg = array('msg' => 'Ingredients could not been created. Please try again.', 'success' => false, 'error' => true);
