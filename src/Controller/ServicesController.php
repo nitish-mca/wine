@@ -23,7 +23,7 @@ class ServicesController extends AppController {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword',
-            'getingrdients', 'getwinelist', 'createwine', 'addsubsricption', 'addsuggestions', 'listoffers']);
+            'getingrdients', 'getwinelist', 'createwine', 'addingredient', 'addsuggestions', 'listoffers']);
     }
 
     public function login() {
@@ -32,7 +32,19 @@ class ServicesController extends AppController {
             $user = $this->Auth->identify();
             if ($user) {
                 $this->Auth->setUser($user);
-                $msg = array('msg' => 'Login Successful.', 'success' => true, 'error' => false);
+                $data['User'] = [
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'name' => $user['name'],
+                    'email' => $user['email'],
+                    'phone' => $user['phone'],
+                    'skype' => $user['skype'],
+                    'address' => $user['address'],
+                    'state' => $user['state'],
+                    'country' => $user['country'],
+                    'last_login' => $user['last_login']
+                ];
+                $msg = array('msg' => 'Login Successful.', 'success' => true, 'data' => $data['User'],'error' => false);
             } else {
                 $msg = array('msg' => 'Login Failed. Wrong Username or Password', 'success' => false, 'error' => true);
             }
@@ -195,7 +207,25 @@ class ServicesController extends AppController {
         echo json_encode($ingredients);
         die;
     }
-
+    
+    public function addingredient(){
+        $this->loadModel('Ingredients');
+        $msg = array('msg' => 'Ingredients could not been added. Please try again.', 'success' => false, 'error' => true);
+        if ($this->request->is('post')) {
+            $ingredient = $this->Ingredients->newEntity($this->request->data, ['associated' => ['Categories']]);
+            $ingredient->user_id = isset($ingredient->user_id) ? $ingredient->user_id : 1;
+            $ingredient->status = 1;            
+           
+            if ($this->Ingredients->save($ingredient)) {
+                $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false);
+            } else {
+                debug($ingredient->errors());
+                $msg = array('msg' => 'Ingredients could not been created. Please try again.', 'success' => false, 'error' => true);
+            }
+        }
+        echo json_encode($msg);
+        die;
+    }
     public function getwinelist() {
         $this->loadModel('Wines');
         $winelist = $this->Wines->find()
@@ -217,10 +247,9 @@ class ServicesController extends AppController {
         die;
     }
     
-    public function createwine()
-    {
+    public function createwine()    {
         $this->loadModel('Wines');
-        $msg = array('msg' => 'Wine could not been sent. Please try again.', 'success' => false, 'error' => true);
+        $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
         if ($this->request->is('post')) {
             $wine = $this->Wines->newEntity($this->request->data, ['associated' => ['WineIngredients']]);
             $wine->user_id = isset($wine->user_id) ? $wine->user_id : 1;
@@ -234,7 +263,6 @@ class ServicesController extends AppController {
             //debug($wine);die;
             if ($this->Wines->save($wine)) {
                 $msg = array('msg' => 'Wine created successfully.', 'success' => true, 'error' => false);
-                //return $this->redirect(['action' => 'index']);
             } else {
                 debug($wine->errors());
                 $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
@@ -243,8 +271,10 @@ class ServicesController extends AppController {
         echo json_encode($msg);
         die;
     }
+    
+    
 
-    public function getofferdetails($offer_id) {
+    public function addfaviorate() {
         $this->loadModel('Offers');
         $offer = $this->Offers->get($offer_id, ['contain' => ['Subcategories']])->toArray();
         $offer['urls'] = !empty($offer['urls']) ? unserialize($offer['urls']) : '';
