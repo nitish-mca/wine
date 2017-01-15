@@ -55,7 +55,6 @@ class WinesController extends AppController
         if ($this->request->is('post')) {
             $wine = $this->Wines->patchEntity($wine, $this->request->data);
             $wine->user_id = $this->Auth->user('id');
-            
             if(isset($wine->photo['name'])){
                 $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
                 $filename = basename($wine->photo['name'], ".$ext");
@@ -64,7 +63,6 @@ class WinesController extends AppController
             }
             if ($this->Wines->save($wine)) {
                 $this->Flash->success(__('The wine has been saved.'));
-
                 return $this->redirect(['action' => 'index']);
             } else {
                 $this->Flash->error(__('The wine could not be saved. Please, try again.'));

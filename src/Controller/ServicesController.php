@@ -23,7 +23,7 @@ class ServicesController extends AppController {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword',
-            'getsubcategories', 'getofferslist', 'getofferdetails', 'addsubsricption', 'addsuggestions', 'listoffers']);
+            'getingrdientsbycategory', 'getwinelist', 'createwine', 'addsubsricption', 'addsuggestions', 'listoffers']);
     }
 
     public function login() {
@@ -70,13 +70,13 @@ class ServicesController extends AppController {
                     'contain' => []
                 ]);
                 $name = $userData[0]->name;
-                
+
                 $tokenString = $userData[0]->id . '_' . time() . '_' . rand();
                 $user = $this->Users->patchEntity($user, $this->request->data);
                 $user->password_token = base64_encode($tokenString);
                 if ($this->Users->save($user)) {
                     $url = Router::url(['controller' => 'users', 'action' => 'changepassword', $user->password_token], true);
-                    $msg = "Dear ".$name.", <br/> We have recieved request for change your password for our portal. Please click on following link for update it.<br/> ". $url;
+                    $msg = "Dear " . $name . ", <br/> We have recieved request for change your password for our portal. Please click on following link for update it.<br/> " . $url;
                     $email = new Email('default');
                     $email->from(['admin@wineshop.net' => 'Wineshop'])
                             ->to($userData[0]->email)
@@ -134,7 +134,7 @@ class ServicesController extends AppController {
         echo $url = Router::url(
                 ['controller' => 'services', 'action' => 'changepassword', 'test'], true
         );
-        
+
         die;
         $email = new Email('default');
         $email->from(['admin@wineshop.net' => 'Wineshop'])
@@ -144,36 +144,29 @@ class ServicesController extends AppController {
         die;
     }
 
-    public function index() {
-
-        $categories = $this->paginate($this->Categories);
-        $this->set(compact('categories'));
-        $this->set('_serialize', ['categories']);
-    }
-
     public function getcategories($id = NULL) {
         $this->loadModel('Categories');
         $Categories = $this->Categories;
         if (!empty($id)) {
             $categories = $this->Categories->find()
-                    ->select(['id', 'title'])                  
+                    ->select(['id', 'title'])
                     ->contain(['Ingredients' => function($q) {
                             return $q->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
-                    }])
+                        }])
                     ->where(['Categories.id' => $id])
                     ->limit(25)
                     ->order('Categories.id ASC')
                     ->toArray();
         } else {
             $categories = $Categories->find()
-                    ->select(['id', 'title'])                  
-                    ->contain(['Ingredients' => function($q) {
-                            return $q->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
+                ->select(['id', 'title'])
+                ->contain(['Ingredients' => function($q) {
+                        return $q->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
                     }])
-                    ->limit(25)                    
-                    ->order('Categories.id ASC')
-                    ->toArray();
-        }
+                ->limit(25)
+                ->order('Categories.id ASC')
+                ->toArray();
+            }
         echo json_encode($categories);
         die;
     }
@@ -184,18 +177,18 @@ class ServicesController extends AppController {
             $ingredients = $this->Ingredients->find()
                     ->limit(25)
                     ->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"])
-                    ->contain(['Categories' => function ($q){
-                        return $q->select(['id', 'title']);
-                    }])
+                    ->contain(['Categories' => function ($q) {
+                            return $q->select(['id', 'title']);
+                        }])
                     ->where(['Ingredients.category_id' => $category_id])
                     ->order('Ingredients.id');
         } else {
             $ingredients = $this->Ingredients->find()
                     ->limit(25)
                     ->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"])
-                    ->contain(['Categories' => function ($q){
-                        return $q->select(['id', 'title']);
-                    }])
+                    ->contain(['Categories' => function ($q) {
+                            return $q->select(['id', 'title']);
+                        }])
                     ->order('Ingredients.id');
         }
 
@@ -205,13 +198,41 @@ class ServicesController extends AppController {
 
     public function getwinelist($user_id = null) {
         $this->loadModel('Wines');
-        $winelist = $this->Wines->find('all', [
-            'limit' => 25,
-//            'fields' => ['id', 'title', 'subtitle'],
-//            'where' => ['subcategory_id' => $subcategory_id],
-            'order' => 'Wines.id ASC'
-        ]);
+        $winelist = $this->Wines->find()
+                ->limit(25)
+                ->order(['Wines.id ASC']);
+
         echo json_encode($winelist);
+        die;
+    }
+    
+    public function createwine()
+    {
+        $this->loadModel('Wines');
+        $msg = array('msg' => 'Wine could not been sent. Please try again.', 'success' => false, 'error' => true);
+        
+        //$articlesTable->Comments->newEntity();
+        if ($this->request->is('post')) {
+            $wine = $this->Wines->newEntity($this->request->data, ['associated' => ['WineIngredients']]);
+           // $wine = $this->Wines->patchEntity($wine, $this->request->data);            
+            $wine->user_id = isset($wine->user_id) ? $wine->user_id : 1;
+            $wine->status = 1;            
+            if(isset($wine->photo['name'])){
+                $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
+                $filename = basename($wine->photo['name'], ".$ext");
+                $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;
+                
+            }
+            //debug($wine);die;
+            if ($this->Wines->save($wine)) {
+                $msg = array('msg' => 'Wine created successfully.', 'success' => true, 'error' => false);
+                //return $this->redirect(['action' => 'index']);
+            } else {
+                debug($wine->errors());
+                $msg = array('msg' => 'Wine could not been sent. Please try again.', 'success' => false, 'error' => true);
+            }
+        }
+        echo json_encode($msg);
         die;
     }
 
@@ -290,4 +311,4 @@ class ServicesController extends AppController {
         die;
     }
 
-}
+}                                
