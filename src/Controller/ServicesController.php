@@ -60,7 +60,19 @@ class ServicesController extends AppController {
         if ($this->request->is('post')) {
             $user = $this->Users->patchEntity($user, $this->request->data);
             if ($this->Users->save($user)) {
-                $msg = array('msg' => 'New User Add Successfully.', 'success' => true, 'error' => false);
+                $data = [
+                    'id' => $user['id'],
+                    'username' => $user['username'],
+                    'name' => $user['name'],
+                    'email' => $user['email'],
+                    'phone' => $user['phone'],
+                    'skype' => $user['skype'],
+                    'address' => $user['address'],
+                    'state' => $user['state'],
+                    'country' => $user['country'],
+                    'last_login' => $user['last_login']
+                ];
+                $msg = array('msg' => 'New User Add Successfully.', 'success' => true, 'error' => false, 'data' => $data);
             } else {
                 $msg = array('msg' => 'Error.', 'success' => false, 'error' => true);
             }
@@ -166,7 +178,7 @@ class ServicesController extends AppController {
                             return $q->select(['id','title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
                         }])
                     ->where(['Categories.id' => $id])
-                    ->limit(25)
+                    ->limit(250)
                     ->order('Categories.id ASC')
                     ->toArray();
         } else {
@@ -175,7 +187,7 @@ class ServicesController extends AppController {
                 ->contain(['Ingredients' => function($q) {
                         return $q->select(['id','title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
                     }])
-                ->limit(25)
+                ->limit(250)
                 ->order('Categories.id ASC')
                 ->toArray();
             }
@@ -187,7 +199,7 @@ class ServicesController extends AppController {
         $this->loadModel('Ingredients');
         if (!empty($category_id)) {
             $ingredients = $this->Ingredients->find()
-                    ->limit(25)
+                    ->limit(250)
                     ->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"])
                     ->contain(['Categories' => function ($q) {
                             return $q->select(['id', 'title']);
@@ -196,7 +208,7 @@ class ServicesController extends AppController {
                     ->order('Ingredients.id');
         } else {
             $ingredients = $this->Ingredients->find()
-                    ->limit(25)
+                    ->limit(250)
                     ->select(['title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"])
                     ->contain(['Categories' => function ($q) {
                             return $q->select(['id', 'title']);
@@ -254,7 +266,7 @@ class ServicesController extends AppController {
                     return $q->select(['id', 'title']);
                 }
                 ])
-                ->limit(25)
+                ->limit(250)
                 ->order(['Wines.id ASC']);
 
         echo json_encode($winelist);
@@ -274,9 +286,10 @@ class ServicesController extends AppController {
                 $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;
                 
             }
-            //debug($wine);die;
+            
             if ($this->Wines->save($wine)) {
-                $msg = array('msg' => 'Wine created successfully.', 'success' => true, 'error' => false);
+                $data = ['id' => $wine['id'], 'title' => $wine['title']];
+                $msg = array('msg' => 'Wine created successfully.', 'success' => true, 'error' => false, 'data' => $data);
             } else {
                 debug($wine->errors());
                 $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
@@ -286,10 +299,9 @@ class ServicesController extends AppController {
         die;
     }
     
-    
 
     public function addfaviorate() {
-        $this->loadModel('Offers');
+        $this->loadModel('FaviorateWine');
         $offer = $this->Offers->get($offer_id, ['contain' => ['Subcategories']])->toArray();
         $offer['urls'] = !empty($offer['urls']) ? unserialize($offer['urls']) : '';
         $offer['photo'] = !empty($offer['photo']) ? '/Offers/photo/' . $offer['photo'] : '';
