@@ -23,7 +23,7 @@ class ServicesController extends AppController {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword',
-            'getingrdients', 'getwinelist', 'createwine', 'addingredient', 'addsuggestions', 'listoffers']);
+            'getingrdients', 'getwinelist', 'createwine', 'addingredient', 'addfaviorates', 'listfaviorate']);
     }
 
     public function login() {
@@ -252,6 +252,7 @@ class ServicesController extends AppController {
         echo json_encode($msg);
         die;
     }
+    
     public function getwinelist() {
         $this->loadModel('Wines');
         $winelist = $this->Wines->find()
@@ -301,12 +302,47 @@ class ServicesController extends AppController {
     
 
     public function addfaviorate() {
-        $this->loadModel('FaviorateWine');
-        $offer = $this->Offers->get($offer_id, ['contain' => ['Subcategories']])->toArray();
-        $offer['urls'] = !empty($offer['urls']) ? unserialize($offer['urls']) : '';
-        $offer['photo'] = !empty($offer['photo']) ? '/Offers/photo/' . $offer['photo'] : '';
-        unset($offer['dir'], $offer['is_expired']);
-        echo json_encode($offer);
+        $this->loadModel('FaviorateWines');
+        $msg = array('msg' => 'Faviorate wine could not been added. Please try again.', 'success' => false, 'error' => true);
+        if ($this->request->is('post')) {
+            $faviorateWine = $this->FaviorateWines->newEntity($this->request->data);
+            if(empty($faviorateWine->user_id) || empty($faviorateWine->wine_id)){
+                $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
+            }else{            
+                $faviorateWine->status = 1;    
+                $faviorateWine->created = date('Y-m-d H:m:s');
+                
+                if($this->FaviorateWines->save($faviorateWine)) {
+                    $msg = array('msg' => 'Faviorate wine saved successfully.', 'success' => true, 'error' => false);
+                } else {
+                    debug($faviorateWine->errors());
+                    $msg = array('msg' => 'Faviorate wine could not been added. Please try again.', 'success' => false, 'error' => true);
+                }
+            }
+        }
+        echo json_encode($msg);
+        die;
+    }
+    
+    public function listfaviorate($user_id = NULL) {
+        $this->loadModel('FaviorateWines');
+        $faviorateWines = $this->FaviorateWines->find()
+                ->where(['FaviorateWines.user_id' => $user_id])
+                ->contain(['Wines'])
+                ->toArray();
+        
+        $data = array();
+        if(!empty($faviorateWines)){
+            foreach ($faviorateWines as $k => $faviorateWine) {
+                $data[$k]['id'] = $faviorateWine['id'];
+                $data[$k]['created'] = $faviorateWine['created'];
+                $data[$k]['wine']['id'] = $faviorateWine['wine']->id;
+                $data[$k]['wine']['title'] = $faviorateWine['wine']->title;
+                $data[$k]['wine']['photo'] = $faviorateWine['wine']->dir.'/'.$faviorateWine['wine']->photo;
+                $data[$k]['wine']['description'] = $faviorateWine['wine']->description;
+            }
+        }
+        echo json_encode($data);
         die;
     }
 
