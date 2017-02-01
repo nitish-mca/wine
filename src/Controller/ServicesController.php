@@ -284,10 +284,8 @@ class ServicesController extends AppController {
             if(isset($wine->photo['name'])){
                 $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
                 $filename = basename($wine->photo['name'], ".$ext");
-                $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;
-                
-            }
-            
+                $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+            }            
             if ($this->Wines->save($wine)) {
                 $data = ['id' => $wine['id'], 'title' => $wine['title']];
                 $msg = array('msg' => 'Wine created successfully.', 'success' => true, 'error' => false, 'data' => $data);
@@ -345,7 +343,53 @@ class ServicesController extends AppController {
         echo json_encode($data);
         die;
     }
+    
+    public function removefaviorate() {
+        $this->loadModel('FaviorateWines');
+        $msg = array('msg' => 'Faviorate wine could not been removed. Please try again.', 'success' => false, 'error' => true);
+        if ($this->request->is('post')) {   
+            $faviorateWine = $this->request->data;
+            if(empty($faviorateWine['user_id']) || empty($faviorateWine['wine_id'])){
+                $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
+            }else{
+                $conditions = array('user_id' => $faviorateWine['user_id'], 'wine_id' => $faviorateWine['wine_id']);
+                if($this->FaviorateWines->deleteAll($conditions)){
+                    $msg = array('msg' => 'Faviorate wine removed successfully.', 'success' => true, 'error' => false);
+                } else {
+                    $msg = array('msg' => 'Faviorate wine could not been removed. Please try again.', 'success' => false, 'error' => true);
+                }
+            }
+        }
+        echo json_encode($msg);
+        die;
+    }
+    
+    public function getRecentlist($user_id = NULL) {
+        $this->loadModel('Wines');
+        $conditions = array();
+        if(!empty($user_id)){
+            $conditions['Wines.user_id'] = $user_id;
+        }
+        $winelist = $this->Wines->find()
+                ->select(['id','title', 'description', 'photo', 'dir'])
+                ->where($conditions)
+                ->contain(['WineIngredients' => function($q){
+                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
+                }, 
+                'WineIngredients.Ingredients' => function($q){
+                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
+                },
+                'WineIngredients.Ingredients.Categories' => function($q){
+                    return $q->select(['id', 'title']);
+                }
+                ])
+                ->limit(250)
+                ->order(['Wines.id DESC']);
 
+        echo json_encode($winelist);
+        die;
+    }
+    
     public function addsubsricption() {
         $this->loadModel('Subscriptions');
         $subscription = $this->Subscriptions->newEntity();
