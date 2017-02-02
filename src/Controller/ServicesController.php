@@ -23,7 +23,7 @@ class ServicesController extends AppController {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword',
-            'getingrdients', 'getwinelist', 'createwine', 'addingredient', 'addfaviorates', 'listfaviorate']);
+            'getingrdients', 'getwinelist', 'createwine', 'addingredient', 'addfaviorate', 'listfaviorate', 'removefaviorate']);
     }
 
     public function login() {
@@ -81,7 +81,7 @@ class ServicesController extends AppController {
         die;
     }
 
-    public function forgotpassword() {
+    public function forgotpassword()    {
         $msg = array('msg' => 'Please enter username.', 'success' => false, 'error' => true);
         $this->loadModel('Users');
         if ($this->request->is(['patch', 'post', 'put'])) {
@@ -255,7 +255,17 @@ class ServicesController extends AppController {
     
     public function getwinelist() {
         $this->loadModel('Wines');
+        $conditions = array();
+        $order = ['Wines.id ASC'];
+        $winelist = $this->__getwinelist($conditions, $order);
+        echo json_encode($winelist);
+        die;
+    }
+    
+    public function __getwinelist($conditions = [], $order = []) {
+        $this->loadModel('Wines');       
         $winelist = $this->Wines->find()
+                ->where($conditions)
                 ->select(['id','title', 'description', 'photo', 'dir'])
                 ->contain(['WineIngredients' => function($q){
                     return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
@@ -268,10 +278,9 @@ class ServicesController extends AppController {
                 }
                 ])
                 ->limit(250)
-                ->order(['Wines.id ASC']);
+                ->order($order);
 
-        echo json_encode($winelist);
-        die;
+        return $winelist;
     }
     
     public function createwine()    {
@@ -322,24 +331,15 @@ class ServicesController extends AppController {
         die;
     }
     
-    public function listfaviorate($user_id = NULL) {
+    public function listfaviorate($user_id) {
         $this->loadModel('FaviorateWines');
-        $faviorateWines = $this->FaviorateWines->find()
+        $faviorateWines = $this->FaviorateWines->find('list')
                 ->where(['FaviorateWines.user_id' => $user_id])
-                ->contain(['Wines'])
                 ->toArray();
+        $conditions = array(['Wines.id IN' => $faviorateWines]);
+        $order = ['Wines.id DESC'];
+        $data = $this->__getwinelist($conditions, $order);
         
-        $data = array();
-        if(!empty($faviorateWines)){
-            foreach ($faviorateWines as $k => $faviorateWine) {
-                $data[$k]['id'] = $faviorateWine['id'];
-                $data[$k]['created'] = $faviorateWine['created'];
-                $data[$k]['wine']['id'] = $faviorateWine['wine']->id;
-                $data[$k]['wine']['title'] = $faviorateWine['wine']->title;
-                $data[$k]['wine']['photo'] = $faviorateWine['wine']->dir.'/'.$faviorateWine['wine']->photo;
-                $data[$k]['wine']['description'] = $faviorateWine['wine']->description;
-            }
-        }
         echo json_encode($data);
         die;
     }
@@ -369,22 +369,9 @@ class ServicesController extends AppController {
         $conditions = array();
         if(!empty($user_id)){
             $conditions['Wines.user_id'] = $user_id;
-        }
-        $winelist = $this->Wines->find()
-                ->select(['id','title', 'description', 'photo', 'dir'])
-                ->where($conditions)
-                ->contain(['WineIngredients' => function($q){
-                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
-                }, 
-                'WineIngredients.Ingredients' => function($q){
-                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
-                },
-                'WineIngredients.Ingredients.Categories' => function($q){
-                    return $q->select(['id', 'title']);
-                }
-                ])
-                ->limit(250)
-                ->order(['Wines.id DESC']);
+        }        
+        $order = ['Wines.id DESC'];
+        $winelist = $this->__getwinelist($conditions, $order);
 
         echo json_encode($winelist);
         die;
