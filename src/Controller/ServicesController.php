@@ -23,7 +23,7 @@ class ServicesController extends AppController {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword', '__getwinelist',
-            'getingrdients', 'listwine', 'createwine', 'addingredient', 'addfaviorate', 'listfaviorate', 'removefaviorate']);
+            'getingrdients', 'listwine', 'createwine', 'addingredient', 'addfaviorate', 'listfaviorate', 'removefaviorate', 'getrecentlist']);
     }
 
     public function login() {
@@ -225,11 +225,12 @@ class ServicesController extends AppController {
         $msg = array('msg' => 'Ingredients could not been added. Please try again.', 'success' => false, 'error' => true);
         if ($this->request->is('post')) {
             $ingredient = $this->Ingredients->newEntity($this->request->data, ['associated' => ['Categories']]);
-            if(empty($ingredient->title) || empty($ingredient->category)){
+//            debug($ingredient);
+            if(empty($ingredient->title)){
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
             }else{
                 if ($this->Ingredients->save($ingredient)) {
-
+//debug($ingredient);die;
                     $data = [
                         'id' => $ingredient['id'],
                         'title' => $ingredient['title'],
@@ -370,6 +371,19 @@ class ServicesController extends AppController {
     }
     
     public function listwine($user_id = NULL) {
+        $this->loadModel('Wines');
+        $conditions = array();
+        if(!empty($user_id)){
+            $conditions['Wines.user_id'] = $user_id;
+        }        
+        $order = ['Wines.id DESC'];
+        $winelist = $this->__getwinelist($conditions, $order);
+
+        echo json_encode($winelist);
+        die;
+    }
+    
+    public function getrecentlist ($user_id = NULL) {
         $this->loadModel('Wines');
         $conditions = array();
         if(!empty($user_id)){
