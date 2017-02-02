@@ -22,8 +22,8 @@ class ServicesController extends AppController {
     public function beforeFilter(Event $event) {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
-        $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword',
-            'getingrdients', 'getwinelist', 'createwine', 'addingredient', 'addfaviorate', 'listfaviorate', 'removefaviorate']);
+        $this->Auth->allow(['login', 'signup', 'checkemail', 'getcategories', 'forgotpassword', 'changepassword', '__getwinelist',
+            'getingrdients', 'listwine', 'createwine', 'addingredient', 'addfaviorate', 'listfaviorate', 'removefaviorate']);
     }
 
     public function login() {
@@ -225,28 +225,29 @@ class ServicesController extends AppController {
         $msg = array('msg' => 'Ingredients could not been added. Please try again.', 'success' => false, 'error' => true);
         if ($this->request->is('post')) {
             $ingredient = $this->Ingredients->newEntity($this->request->data, ['associated' => ['Categories']]);
-            $ingredient->user_id = isset($ingredient->user_id) ? $ingredient->user_id : 1;
-            $ingredient->status = 1;
-           
-            if ($this->Ingredients->save($ingredient)) {
-                
-                $data = [
-                    'id' => $ingredient['id'],
-                    'title' => $ingredient['title'],
-                    'size' => $ingredient['size'],
-                    'uom' => $ingredient['uom'],
-                    'cost' => $ingredient['cost'],
-                    'category_id' => $ingredient['category_id'],
-                    'category' => [
-                        'id' => $ingredient['category']->id,
-                        'title' => $ingredient['category']-> title
-                    ]   
-                ];
-                
-                $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false, 'data' => $data);
-            } else {
-                debug($ingredient->errors());
-                $msg = array('msg' => 'Ingredients could not been created. Please try again.', 'success' => false, 'error' => true);
+            if(empty($ingredient->title) || empty($ingredient->category)){
+                $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
+            }else{
+                if ($this->Ingredients->save($ingredient)) {
+
+                    $data = [
+                        'id' => $ingredient['id'],
+                        'title' => $ingredient['title'],
+                        'size' => $ingredient['size'],
+                        'uom' => $ingredient['uom'],
+                        'cost' => $ingredient['cost'],
+                        'category_id' => $ingredient['category_id'],
+                        'category' => [
+                            'id' => $ingredient['category']->id,
+                            'title' => $ingredient['category']-> title
+                        ]   
+                    ];
+
+                    $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false, 'data' => $data);
+                } else {
+                    debug($ingredient->errors());
+                    $msg = array('msg' => 'Ingredients could not been created. Please try again.', 'success' => false, 'error' => true);
+                }
             }
         }
         echo json_encode($msg);
@@ -288,19 +289,23 @@ class ServicesController extends AppController {
         $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
         if ($this->request->is('post')) {
             $wine = $this->Wines->newEntity($this->request->data, ['associated' => ['WineIngredients']]);
-            $wine->user_id = isset($wine->user_id) ? $wine->user_id : 1;
-            $wine->status = 1;            
-            if(isset($wine->photo['name'])){
-                $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
-                $filename = basename($wine->photo['name'], ".$ext");
-                $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
-            }            
-            if ($this->Wines->save($wine)) {
-                $data = ['id' => $wine['id'], 'title' => $wine['title']];
-                $msg = array('msg' => 'Wine created successfully.', 'success' => true, 'error' => false, 'data' => $data);
-            } else {
-                debug($wine->errors());
-                $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
+            if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
+                $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
+            }
+            else{
+                $wine->status = 1;            
+                if(isset($wine->photo['name'])){
+                    $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
+                    $filename = basename($wine->photo['name'], ".$ext");
+                    $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+                }            
+                if ($this->Wines->save($wine)) {
+                    $data = ['id' => $wine['id'], 'title' => $wine['title']];
+                    $msg = array('msg' => 'Wine created successfully.', 'success' => true, 'error' => false, 'data' => $data);
+                } else {
+                    debug($wine->errors());
+                    $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
+                }
             }
         }
         echo json_encode($msg);
@@ -364,7 +369,7 @@ class ServicesController extends AppController {
         die;
     }
     
-    public function getRecentlist($user_id = NULL) {
+    public function listwine($user_id = NULL) {
         $this->loadModel('Wines');
         $conditions = array();
         if(!empty($user_id)){
