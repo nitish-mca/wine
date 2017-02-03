@@ -245,8 +245,7 @@ class ServicesController extends AppController {
 
                     $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false, 'data' => $data);
                 } else {
-                    debug($ingredient->errors());
-                    $msg = array('msg' => 'Ingredients could not been created. Please try again.', 'success' => false, 'error' => true);
+                    $msg = array('msg' => 'Ingredients could not been created. Please try again.', 'success' => false, 'error' => true, 'error_data' => $ingredient->errors());
                 }
             }
         }
@@ -254,19 +253,18 @@ class ServicesController extends AppController {
         die;
     }
     
-    public function getwinelist() {
+    public function getwinelist($user_id) {
         $this->loadModel('Wines');
         $conditions = array();
-        $order = ['Wines.id ASC'];
+        $order = ['Wines.id DESC'];
         $winelist = [];
-        $winelist = $this->__getwinelist($conditions, $order);
+        $winelist = $this->__getwinelist($user_id, $conditions, $order);
         echo json_encode($winelist);
         die;
     }
     
-    public function __getwinelist($conditions = [], $order = []) {
+    public function __getwinelist($user_id = NULL, $conditions = [], $order = []) {
         $this->loadModel('Wines');
-        $user_id = 1;
         $winelist = $this->Wines->find()
                 ->where($conditions)
                 ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
@@ -285,8 +283,12 @@ class ServicesController extends AppController {
                 }
                 ])
                 ->limit(250)
-                ->order($order);
-
+                ->order($order)
+                ->toArray();
+        foreach($winelist as $i => $wine){
+            $winelist[$i]['isFav'] = !empty($wine['faviorate_wines']);
+            unset($winelist[$i]['faviorate_wines']);
+        }        
         return $winelist;
     }
     
@@ -318,16 +320,27 @@ class ServicesController extends AppController {
         die;
     }
     
-    public function listwine($user_id = NULL) {
+    public function listwine($user_id, $type = 'global', $key = NULL) {
         $this->loadModel('Wines');
-        $conditions = array();
-        if(!empty($user_id)){
-            $conditions['Wines.user_id'] = $user_id;
-        }        
-        $order = ['Wines.id DESC'];
-        $winelist = [];
-        $winelist = $this->__getwinelist($conditions, $order);
-
+        $conditions = $order = $winelist = array();
+        
+        switch ($type){
+            case 'global':
+                $order = ['Wines.id ASC'];
+                break;
+            case 'recent':
+                $order = ['Wines.id DESC'];
+                break;
+            case 'self':
+                $conditions['Wines.user_id'] = $user_id;
+                $order = ['Wines.id DESC'];
+                break;
+            case 'search':
+                $conditions['Wines.title LIKE'] = '%'.$key.'%';
+                break;
+        }   
+        
+        $winelist = $this->__getwinelist($user_id, $conditions, $order);
         echo json_encode($winelist);
         die;
     }
@@ -438,7 +451,7 @@ class ServicesController extends AppController {
         die;
     }
     
-    public function getrecentlist ($user_id = NULL) {
+    public function getrecentlist ($user_id = NULL, $type = 'global') {
         $this->loadModel('Wines');
         $conditions = array();
         if(!empty($user_id)){
