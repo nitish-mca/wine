@@ -338,22 +338,18 @@ class ServicesController extends AppController {
         $wineData = $this->Wines->get($id, [
             'contain' => ['WineIngredients']
         ]);
-//        debug($wine);die;
         if(empty($wineData)){
             $msg = array('msg' => 'Invalid Wine. Please try again.', 'success' => false, 'error' => true);
         }       
         
         if ($this->request->is('post')) {
-            if($this->request->data['user_id'] != $wineData->user_id){
-                
+            if($this->request->data['user_id'] != $wineData->user_id){                
                 $wine = $wineData->toArray();
                 $wine = $this->Wines->newEntity($wine, ['associated' => ['WineIngredients']]);
-              //  debug($wine);die;
                 $this->Wines->save($wine);
-                
+                $wineData = $this->Wines->get($wine->id, ['contain' => ['WineIngredients']]);
             }
-            $wine = $this->Wines->patchEntity($wine, $this->request->data);
-            
+            $wine = $this->Wines->patchEntity($wineData, $this->request->data);
             if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
             }
@@ -363,14 +359,12 @@ class ServicesController extends AppController {
                     $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
                     $filename = basename($wine->photo['name'], ".$ext");
                     $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
-                }            
-                //$this->Wines->create();
+                }
                 if ($this->Wines->save($wine)) {
                     $data = ['id' => $wine['id'], 'title' => $wine['title']];
                     $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
                 } else {
-                    debug($wine->errors());
-                    $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
+                    $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
                 }
             }
         }
