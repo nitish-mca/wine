@@ -98,7 +98,10 @@ class UsersTable extends Table
 
         $validator
             ->allowEmpty('phone');
-
+        
+        $validator
+            ->allowEmpty('photo');
+        
         $validator
             ->allowEmpty('skype');
 

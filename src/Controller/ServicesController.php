@@ -1,8 +1,8 @@
 <?php
-
 namespace App\Controller;
 
 use App\Controller\AppController;
+use Cake\Datasource\ConnectionManager;
 use Cake\Event\Event;
 use Cake\Mailer\Email;
 use Cake\Routing\Router;
@@ -186,7 +186,7 @@ class ServicesController extends AppController {
         if (!empty($id)) {
             $conditions['Categories.id'] = $id;
         }
-        
+        $categories = [];
         $categories = $this->Categories->find()
                 ->select(['id', 'title'])
                 ->contain(['Ingredients' => function($q) {
@@ -207,6 +207,7 @@ class ServicesController extends AppController {
         if (!empty($category_id)) {
             $conditions['Ingredients.category_id'] = $category_id;
         }
+        $ingredients = [];
         $ingredients = $this->Ingredients->find()
                 ->limit(250)
                 ->where($conditions)
@@ -257,6 +258,7 @@ class ServicesController extends AppController {
         $this->loadModel('Wines');
         $conditions = array();
         $order = ['Wines.id ASC'];
+        $winelist = [];
         $winelist = $this->__getwinelist($conditions, $order);
         echo json_encode($winelist);
         die;
@@ -318,6 +320,7 @@ class ServicesController extends AppController {
             $conditions['Wines.user_id'] = $user_id;
         }        
         $order = ['Wines.id DESC'];
+        $winelist = [];
         $winelist = $this->__getwinelist($conditions, $order);
 
         echo json_encode($winelist);
@@ -376,7 +379,10 @@ class ServicesController extends AppController {
     }
     
     public function searchwine(){
-        
+        $conn = ConnectionManager::get('default');
+        $stmt = $conn->execute('SELECT * FROM users')->fetchAll('assoc');
+        debug($stmt);
+        die;
     }
     
     public function addfaviorate() {
@@ -442,15 +448,22 @@ class ServicesController extends AppController {
             $conditions['Wines.user_id'] = $user_id;
         }        
         $order = ['Wines.id DESC'];
+        $winelist = [];
         $winelist = $this->__getwinelist($conditions, $order);
 
         echo json_encode($winelist);
         die;
     }
     
-    public function getprofile($user_id){
+    public function getprofile($user_id = NULL){
         $this->loadModel('Users');
+        if(empty($user_id)){
+            $user = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
+        }
         $user = $this->Users->get($user_id);
+        if(empty($user)){
+            $user = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
+        }       
         echo json_encode($user);
         die;
     }
@@ -459,10 +472,21 @@ class ServicesController extends AppController {
         $this->loadModel('Users');
         $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true);
         $user = $this->Users->get($user_id);
+        
+        if(empty($user)){
+            $msg = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
+        }
+        
         if ($this->request->is('post')) {
             $user = $this->Users->patchEntity($user, $this->request->data);
+            if(isset($user->photo['name'])){
+                $ext = pathinfo($user->photo['name'], PATHINFO_EXTENSION);
+                $filename = basename($user->photo['name'], ".$ext");
+                $user->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+            }
             if ($this->Users->save($user)) {
                 $this->Flash->success(__('The user has been saved.'));
+                $user = $this->Users->get($user_id);
                 $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
             } else {
                 $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
@@ -471,5 +495,4 @@ class ServicesController extends AppController {
         echo json_encode($msg);
         die;
     }
-
-}                                
+}
