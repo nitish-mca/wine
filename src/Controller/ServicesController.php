@@ -329,7 +329,6 @@ class ServicesController extends AppController {
     
     public function updatewine($id) {
         $msg = array('msg' => 'Wine could not been updated. Please try again.', 'success' => false, 'error' => true);
-        
         if(empty($id)){
             $msg = array('msg' => 'Invalid Wine. Please try again.', 'success' => false, 'error' => true);
         }
@@ -343,6 +342,9 @@ class ServicesController extends AppController {
         }       
         
         if ($this->request->is('post')) {
+            if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
+                $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
+            } else{
             if($this->request->data['user_id'] != $wineData->user_id){                
                 $wine = $wineData->toArray();
                 $wine = $this->Wines->newEntity($wine, ['associated' => ['WineIngredients']]);
@@ -350,22 +352,18 @@ class ServicesController extends AppController {
                 $wineData = $this->Wines->get($wine->id, ['contain' => ['WineIngredients']]);
             }
             $wine = $this->Wines->patchEntity($wineData, $this->request->data);
-            if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
-                $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
+            
+            if(isset($wine->photo['name'])){
+                $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
+                $filename = basename($wine->photo['name'], ".$ext");
+                $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
             }
-            else{
-                $wine->status = 1;            
-                if(isset($wine->photo['name'])){
-                    $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
-                    $filename = basename($wine->photo['name'], ".$ext");
-                    $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
-                }
-                if ($this->Wines->save($wine)) {
-                    $data = ['id' => $wine['id'], 'title' => $wine['title']];
-                    $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
-                } else {
-                    $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
-                }
+            if ($this->Wines->save($wine)) {
+                $data = ['id' => $wine['id'], 'title' => $wine['title']];
+                $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
+            } else {
+                $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+            }
             }
         }
         echo json_encode($msg);
