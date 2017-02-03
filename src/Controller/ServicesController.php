@@ -265,10 +265,11 @@ class ServicesController extends AppController {
     }
     
     public function __getwinelist($conditions = [], $order = []) {
-        $this->loadModel('Wines');       
+        $this->loadModel('Wines');
+        $user_id = 1;
         $winelist = $this->Wines->find()
                 ->where($conditions)
-                ->select(['id','title', 'description', 'photo', 'dir'])
+                ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
                 ->contain(['WineIngredients' => function($q){
                     return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
                 }, 
@@ -277,6 +278,10 @@ class ServicesController extends AppController {
                 },
                 'WineIngredients.Ingredients.Categories' => function($q){
                     return $q->select(['id', 'title']);
+                },
+                'FaviorateWines' =>function($q) use ($user_id){
+                    return $q->select(['id', 'wine_id'])
+                            ->where(['FaviorateWines.user_id' => $user_id]);
                 }
                 ])
                 ->limit(250)
