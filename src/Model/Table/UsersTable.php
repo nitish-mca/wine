@@ -41,6 +41,13 @@ class UsersTable extends Table
         $this->table('users');
         $this->displayField('name');
         $this->primaryKey('id');
+        
+        $this->addBehavior('Josegonzalez/Upload.Upload', [
+            'photo' => [
+                'path' => 'webroot{DS}img{DS}{model}{DS}{field}',
+                'filename' => md5(time())
+                ],
+        ]);
 
         $this->addBehavior('Timestamp');
 
