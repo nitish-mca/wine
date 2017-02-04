@@ -25,7 +25,7 @@ class ServicesController extends AppController {
         $this->Auth->allow(['login', 'signup', 'forgotpassword', 'changepassword', 'checkemail',
             'getcategories',
             'getingrdients','addingredient',
-            'getwinelist', '__getwinelist', 'createwine', 'listwine', 'updatewine', 'searchwine',
+            'createwine', '__getwinelist', 'getwinelist', 'listwine', 'updatewine', 'searchwine',
             'addfaviorate', 'listfaviorate', 'removefaviorate', 
             'getrecentlist',
             'getprofile', 'updateprofile'
@@ -245,53 +245,15 @@ class ServicesController extends AppController {
 
                     $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false, 'data' => $data);
                 } else {
-                    $msg = array('msg' => 'Ingredients could not been created. Please try again.', 'success' => false, 'error' => true, 'error_data' => $ingredient->errors());
+                    debug($ingredient->errors());
+                    $msg = array('msg' => 'Ingredients could not been created. Please try again.', 'success' => false, 'error' => true);
                 }
             }
         }
         echo json_encode($msg);
         die;
     }
-    
-    public function getwinelist($user_id) {
-        $this->loadModel('Wines');
-        $conditions = array();
-        $order = ['Wines.id DESC'];
-        $winelist = [];
-        $winelist = $this->__getwinelist($user_id, $conditions, $order);
-        echo json_encode($winelist);
-        die;
-    }
-    
-    public function __getwinelist($user_id = NULL, $conditions = [], $order = []) {
-        $this->loadModel('Wines');
-        $winelist = $this->Wines->find()
-                ->where($conditions)
-                ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
-                ->contain(['WineIngredients' => function($q){
-                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
-                }, 
-                'WineIngredients.Ingredients' => function($q){
-                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
-                },
-                'WineIngredients.Ingredients.Categories' => function($q){
-                    return $q->select(['id', 'title']);
-                },
-                'FaviorateWines' =>function($q) use ($user_id){
-                    return $q->select(['id', 'wine_id'])
-                            ->where(['FaviorateWines.user_id' => $user_id]);
-                }
-                ])
-                ->limit(250)
-                ->order($order)
-                ->toArray();
-        foreach($winelist as $i => $wine){
-            $winelist[$i]['isFav'] = !empty($wine['faviorate_wines']);
-            unset($winelist[$i]['faviorate_wines']);
-        }        
-        return $winelist;
-    }
-    
+       
     public function createwine()    {
         $this->loadModel('Wines');
         $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
@@ -320,7 +282,72 @@ class ServicesController extends AppController {
         die;
     }
     
-    public function listwine($user_id, $type = 'global', $key = NULL) {
+    public function __getwinelist($conditions = [], $order = []) {
+        $this->loadModel('Wines');
+        $user_id = 1;
+        $winelist = $this->Wines->find()
+                ->where($conditions)
+                ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
+                ->contain(['WineIngredients' => function($q){
+                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
+                }, 
+                'WineIngredients.Ingredients' => function($q){
+                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
+                },
+                'WineIngredients.Ingredients.Categories' => function($q){
+                    return $q->select(['id', 'title']);
+                },
+                'FaviorateWines' =>function($q) use ($user_id){
+                    return $q->select(['id', 'wine_id'])
+                            ->where(['FaviorateWines.user_id' => $user_id]);
+                }
+                ])
+                ->limit(250)
+                ->order($order);
+
+        return $winelist;
+    }
+    
+    public function getwinelist() {
+        $this->loadModel('Wines');
+        $conditions = array();
+        $order = ['Wines.id ASC'];
+        $winelist = [];
+        $winelist = $this->__getwinelist($conditions, $order);
+        echo json_encode($winelist);
+        die;
+    }
+    
+    public function __listingwine($user_id = NULL, $conditions = [], $order = [], $limit= 250) {
+        $this->loadModel('Wines');
+        $winelist = $this->Wines->find()
+                ->where($conditions)
+                ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
+                ->contain(['WineIngredients' => function($q){
+                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
+                }, 
+                'WineIngredients.Ingredients' => function($q){
+                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
+                },
+                'WineIngredients.Ingredients.Categories' => function($q){
+                    return $q->select(['id', 'title']);
+                },
+                'FaviorateWines' =>function($q) use ($user_id){
+                    return $q->select(['id', 'wine_id'])
+                            ->where(['FaviorateWines.user_id' => $user_id]);
+                }
+                ])
+                ->limit($limit)
+                ->order($order)
+                ->toArray();
+        foreach($winelist as $i => $wine){
+            $winelist[$i]['isFav'] = !empty($wine['faviorate_wines']);
+            unset($winelist[$i]['faviorate_wines']);
+        }        
+        return $winelist;
+    }
+    
+    public function listwine($user_id = NULL, $type = 'global', $key = NULL) {
         $this->loadModel('Wines');
         $conditions = $order = $winelist = array();
         
@@ -340,7 +367,7 @@ class ServicesController extends AppController {
                 break;
         }   
         
-        $winelist = $this->__getwinelist($user_id, $conditions, $order);
+        $winelist = $this->__listingwine($user_id, $conditions, $order);
         echo json_encode($winelist);
         die;
     }
@@ -363,25 +390,25 @@ class ServicesController extends AppController {
             if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
             } else{
-            if($this->request->data['user_id'] != $wineData->user_id){                
-                $wine = $wineData->toArray();
-                $wine = $this->Wines->newEntity($wine, ['associated' => ['WineIngredients']]);
-                $this->Wines->save($wine);
-                $wineData = $this->Wines->get($wine->id, ['contain' => ['WineIngredients']]);
-            }
-            $wine = $this->Wines->patchEntity($wineData, $this->request->data);
-            
-            if(isset($wine->photo['name'])){
-                $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
-                $filename = basename($wine->photo['name'], ".$ext");
-                $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
-            }
-            if ($this->Wines->save($wine)) {
-                $data = ['id' => $wine['id'], 'title' => $wine['title']];
-                $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
-            } else {
-                $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
-            }
+                if($this->request->data['user_id'] != $wineData->user_id){                
+                    $wine = $wineData->toArray();
+                    $wine = $this->Wines->newEntity($wine, ['associated' => ['WineIngredients']]);
+                    $this->Wines->save($wine);
+                    $wineData = $this->Wines->get($wine->id, ['contain' => ['WineIngredients']]);
+                }
+                $wine = $this->Wines->patchEntity($wineData, $this->request->data);
+
+                if(isset($wine->photo['name'])){
+                    $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
+                    $filename = basename($wine->photo['name'], ".$ext");
+                    $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+                }
+                if ($this->Wines->save($wine)) {
+                    $data = ['id' => $wine['id'], 'title' => $wine['title']];
+                    $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
+                } else {
+                    $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+                }
             }
         }
         echo json_encode($msg);
@@ -451,7 +478,7 @@ class ServicesController extends AppController {
         die;
     }
     
-    public function getrecentlist ($user_id = NULL, $type = 'global') {
+    public function getrecentlist ($user_id = NULL) {
         $this->loadModel('Wines');
         $conditions = array();
         if(!empty($user_id)){
