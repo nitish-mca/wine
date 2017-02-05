@@ -24,7 +24,7 @@ class ServicesController extends AppController {
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'forgotpassword', 'changepassword', 'checkemail',
             'getcategories',
-            'getingrdients','addingredient',
+            'getingrdients','addingredient', 'deletewine', '__listwine',
             'createwine', '__getwinelist', 'getwinelist', 'listwine', 'updatewine', 'searchwine',
             'addfaviorate', 'listfaviorate', 'removefaviorate', 
             'getrecentlist',
@@ -354,20 +354,35 @@ class ServicesController extends AppController {
         switch ($type){
             case 'global':
                 $order = ['Wines.id ASC'];
+                $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
             case 'recent':
                 $order = ['Wines.id DESC'];
+                $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
             case 'self':
                 $conditions['Wines.user_id'] = $user_id;
                 $order = ['Wines.id DESC'];
+                $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
             case 'search':
                 $conditions['Wines.title LIKE'] = '%'.$key.'%';
+                $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
-        }   
-        
-        $winelist = $this->__listingwine($user_id, $conditions, $order);
+            case 'faviorate':
+                $faviorateWines = array();
+                $faviorateWines = $this->Wines->FaviorateWines->find('list',['valueField' => 'wine_id'])
+                    ->where(['FaviorateWines.user_id' => $user_id])
+                    ->toArray();
+                if(empty($faviorateWines)){
+                    $winelist = array();
+                }else{                
+                    $conditions = array(['Wines.id IN' => $faviorateWines]);
+                    $order = ['Wines.id DESC'];
+                    $winelist = $this->__listingwine($user_id, $conditions, $order);
+                }
+                break;
+        }         
         echo json_encode($winelist);
         die;
     }
@@ -397,7 +412,6 @@ class ServicesController extends AppController {
                     $wineData = $this->Wines->get($wine->id, ['contain' => ['WineIngredients']]);
                 }
                 $wine = $this->Wines->patchEntity($wineData, $this->request->data);
-
                 if(isset($wine->photo['name'])){
                     $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
                     $filename = basename($wine->photo['name'], ".$ext");
@@ -408,6 +422,33 @@ class ServicesController extends AppController {
                     $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
                 } else {
                     $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+                }
+            }
+        }
+        echo json_encode($msg);
+        die;
+    }
+    
+    public function deletewine(){
+        //$wine_id , $user_id
+        $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true
+            );
+        if ($this->request->is('post')) {
+            $this->loadModel('Wines');
+            $wine_id = $this->request->data['wine_id'];
+            $user_id = $this->request->data['user_id'];
+            $wine = $this->Wines->get($wine_id);
+            if(empty($wine)){
+                $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
+            }
+            else if($wine->user_id != $user_id){
+                $msg = array('msg' => 'You can delete only created by you. Please try again.', 'success' => false, 'error' => true);
+            }
+            else{
+                if ($this->Wines->delete($wine)) {
+                    $msg = array('msg' => 'Wine deleted successfully.', 'success' => true, 'error' => false);
+                } else {
+                    $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
                 }
             }
         }
@@ -429,15 +470,19 @@ class ServicesController extends AppController {
             $faviorateWine = $this->FaviorateWines->newEntity($this->request->data);
             if(empty($faviorateWine->user_id) || empty($faviorateWine->wine_id)){
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
-            }else{            
-                $faviorateWine->status = 1;    
-                $faviorateWine->created = date('Y-m-d H:m:s');
-                
-                if($this->FaviorateWines->save($faviorateWine)) {
-                    $msg = array('msg' => 'Faviorate wine saved successfully.', 'success' => true, 'error' => false);
-                } else {
-                    debug($faviorateWine->errors());
-                    $msg = array('msg' => 'Faviorate wine could not been added. Please try again.', 'success' => false, 'error' => true);
+            }else{
+                $checkFaviorateWines = $this->FaviorateWines->find('list')
+                    ->where(['user_id' => $faviorateWine->user_id, 'wine_id' => $faviorateWine->wine_id]);
+                if(!empty($checkFaviorateWines)){
+                    $msg = array('msg' => 'Already added as faviorate.', 'success' => false, 'error' => true);
+                }else{
+                    $faviorateWine->status = 1;    
+                    $faviorateWine->created = date('Y-m-d H:m:s');
+                    if($this->FaviorateWines->save($faviorateWine)) {
+                        $msg = array('msg' => 'Faviorate wine saved successfully.', 'success' => true, 'error' => false);
+                    } else {
+                        $msg = array('msg' => 'Faviorate wine could not been added. Please try again.', 'success' => false, 'error' => true, 'error-data' => $faviorateWine->errors());
+                    }
                 }
             }
         }
