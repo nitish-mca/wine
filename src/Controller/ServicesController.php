@@ -350,7 +350,7 @@ class ServicesController extends AppController {
     public function listwine($user_id = NULL, $type = 'global', $key = NULL) {
         $this->loadModel('Wines');
         $conditions = $order = $winelist = array();
-        
+        $winelist = [];
         switch ($type){
             case 'global':
                 $order = ['Wines.id ASC'];
@@ -374,9 +374,7 @@ class ServicesController extends AppController {
                 $faviorateWines = $this->Wines->FaviorateWines->find('list',['valueField' => 'wine_id'])
                     ->where(['FaviorateWines.user_id' => $user_id])
                     ->toArray();
-                if(empty($faviorateWines)){
-                    $winelist = array();
-                }else{                
+                if(!empty($faviorateWines)){                
                     $conditions = array(['Wines.id IN' => $faviorateWines]);
                     $order = ['Wines.id DESC'];
                     $winelist = $this->__listingwine($user_id, $conditions, $order);
@@ -394,58 +392,122 @@ class ServicesController extends AppController {
         }
         
         $this->loadModel('Wines');
-        $wineData = $this->Wines->get($id, [
-            'contain' => ['WineIngredients']
-        ]);
-        if(empty($wineData)){
-            $msg = array('msg' => 'Invalid Wine. Please try again.', 'success' => false, 'error' => true);
-        }       
-        
-        if ($this->request->is('post')) {
-            if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
-                $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
-            } else{
-                if($this->request->data['user_id'] != $wineData->user_id){                
-                    $wine = $wineData->toArray();
-                    $wine = $this->Wines->newEntity($wine, ['associated' => ['WineIngredients']]);
-                    $this->Wines->save($wine);
-                    $wineData = $this->Wines->get($wine->id, ['contain' => ['WineIngredients']]);
-                }
+        if($this->Wines->exists(['id' => $id])){
+            $wineData = $this->Wines->get($id, ['contain' => ['WineIngredients']]);
+            if ($this->request->is('post')) {
                 $wine = $this->Wines->patchEntity($wineData, $this->request->data);
-                if(isset($wine->photo['name'])){
-                    $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
-                    $filename = basename($wine->photo['name'], ".$ext");
-                    $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
-                }
-                if ($this->Wines->save($wine)) {
-                    $data = ['id' => $wine['id'], 'title' => $wine['title']];
-                    $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
-                } else {
-                    $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+                if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
+                    $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
+                } else{                
+                    if(isset($wine->photo['name'])){
+                        $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
+                        $filename = basename($wine->photo['name'], ".$ext");
+                        $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+                    }
+                    if ($this->Wines->save($wine)) {
+                        $data = ['id' => $wine['id'], 'title' => $wine['title']];
+                        $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
+                    } else {
+                        $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+                    }
                 }
             }
+        }else{
+            $msg = array('msg' => 'Invalid Wine. Please try again.', 'success' => false, 'error' => true);
         }
         echo json_encode($msg);
         die;
     }
     
+//    public function updatewine($id) {
+//        $msg = array('msg' => 'Wine could not been updated. Please try again.', 'success' => false, 'error' => true);
+//        if(empty($id)){
+//            $msg = array('msg' => 'Invalid Wine. Please try again.', 'success' => false, 'error' => true);
+//        }
+//        
+//        $this->loadModel('Wines');
+//        $wineData = $this->Wines->get($id, [
+//            'contain' => ['WineIngredients']
+//        ]);
+//        if(empty($wineData)){
+//            $msg = array('msg' => 'Invalid Wine. Please try again.', 'success' => false, 'error' => true);
+//        }       
+//        
+//        if ($this->request->is('post')) {
+//            if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
+//                $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
+//            } else{
+//                if($this->request->data['user_id'] != $wineData->user_id){                
+//                    $wine = $wineData->toArray();
+//                    $wine = $this->Wines->newEntity($wine, ['associated' => ['WineIngredients']]);
+//                    $this->Wines->save($wine);
+//                    $wineData = $this->Wines->get($wine->id, ['contain' => ['WineIngredients']]);
+//                }
+//                $wine = $this->Wines->patchEntity($wineData, $this->request->data);
+//                if(isset($wine->photo['name'])){
+//                    $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
+//                    $filename = basename($wine->photo['name'], ".$ext");
+//                    $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+//                }
+//                if ($this->Wines->save($wine)) {
+//                    $data = ['id' => $wine['id'], 'title' => $wine['title']];
+//                    $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
+//                } else {
+//                    $msg = array('msg' => 'Wine could not updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+//                }
+//            }
+//        }
+//        echo json_encode($msg);
+//        die;
+//    }
+    
+//    public function deletewine(){
+//        //$wine_id , $user_id
+//        $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true);
+//        if ($this->request->is('post')) {
+//            $this->loadModel('Wines');
+//            $wine_id = $this->request->data['wine_id'];
+//            $user_id = $this->request->data['user_id'];
+//            $wine = $this->Wines->find($wine_id);
+//            if(empty($wine)){
+//                $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
+//            }
+//            else if($wine->user_id != $user_id){
+//                $msg = array('msg' => 'You can delete only created by you. Please try again.', 'success' => false, 'error' => true);
+//            }
+//            else{
+//                if ($this->Wines->delete($wine)) {
+//                    $this->loadModel('FaviorateWines');
+//                    $favWines = $this->FaviorateWines->find('list')
+//                            ->where(['wine_id' => $wine_id]);
+//                    
+//                    foreach($favWines as $favWine){
+//                        $fwine = $this->FaviorateWines->get($favWine);
+//                        $this->FaviorateWines->delete($fwine);
+//                    }
+//                    $msg = array('msg' => 'Wine deleted successfully.', 'success' => true, 'error' => false);
+//                } else {
+//                    $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+//                }
+//            }
+//        }
+//        echo json_encode($msg);
+//        die;
+//    }
+    
     public function deletewine(){
-        //$wine_id , $user_id
-        $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true
-            );
+        $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true);
         if ($this->request->is('post')) {
             $this->loadModel('Wines');
-            $wine_id = $this->request->data['wine_id'];
-            $user_id = $this->request->data['user_id'];
-            $wine = $this->Wines->get($wine_id);
-            if(empty($wine)){
+            $wine_id = $this->request->data['wine_id'];            
+            if(!$this->Wines->exists(['id' => $wine_id])){
                 $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
             }
-            else if($wine->user_id != $user_id){
-                $msg = array('msg' => 'You can delete only created by you. Please try again.', 'success' => false, 'error' => true);
-            }
             else{
+                $wine = $this->Wines->get($wine_id);
                 if ($this->Wines->delete($wine)) {
+                    $this->loadModel('FaviorateWines');
+                    $favWines = $this->FaviorateWines->deleteAll(['FaviorateWines.wine_id' => $wine_id]);                    
                     $msg = array('msg' => 'Wine deleted successfully.', 'success' => true, 'error' => false);
                 } else {
                     $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
@@ -453,13 +515,6 @@ class ServicesController extends AppController {
             }
         }
         echo json_encode($msg);
-        die;
-    }
-    
-    public function searchwine(){
-        $conn = ConnectionManager::get('default');
-        $stmt = $conn->execute('SELECT * FROM users')->fetchAll('assoc');
-        debug($stmt);
         die;
     }
     
@@ -472,7 +527,8 @@ class ServicesController extends AppController {
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
             }else{
                 $checkFaviorateWines = $this->FaviorateWines->find('list')
-                    ->where(['user_id' => $faviorateWine->user_id, 'wine_id' => $faviorateWine->wine_id]);
+                    ->where(['user_id' => $faviorateWine->user_id, 'wine_id' => $faviorateWine->wine_id])->toArray();
+               // debug($checkFaviorateWines);
                 if(!empty($checkFaviorateWines)){
                     $msg = array('msg' => 'Already added as faviorate.', 'success' => false, 'error' => true);
                 }else{
