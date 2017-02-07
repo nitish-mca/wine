@@ -349,11 +349,10 @@ class ServicesController extends AppController {
     
     public function listwine($user_id = NULL, $type = 'global', $key = NULL) {
         $this->loadModel('Wines');
-        $conditions = $order = $winelist = array();
-        $winelist = [];
+        $conditions = $winelist = array();
+        $order = ['Wines.title ASC'];        
         switch ($type){
             case 'global':
-                $order = ['Wines.id ASC'];
                 $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
             case 'recent':
@@ -362,7 +361,6 @@ class ServicesController extends AppController {
                 break;
             case 'self':
                 $conditions['Wines.user_id'] = $user_id;
-                $order = ['Wines.id DESC'];
                 $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
             case 'search':
@@ -376,7 +374,6 @@ class ServicesController extends AppController {
                     ->toArray();
                 if(!empty($faviorateWines)){                
                     $conditions = array(['Wines.id IN' => $faviorateWines]);
-                    $order = ['Wines.id DESC'];
                     $winelist = $this->__listingwine($user_id, $conditions, $order);
                 }
                 break;
