@@ -460,7 +460,7 @@ class ServicesController extends AppController {
                         $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
                     }
                     $this->loadModel('WineIngredients');
-                    $favWines = $this->WineIngredients->deleteAll(['WineIngredients.wine_id' => $wine_id]);
+                    $favWines = $this->WineIngredients->deleteAll(['WineIngredients.wine_id' => $id]);
                     if ($this->Wines->save($wine)) {
                         $data = ['id' => $wine['id'], 'title' => $wine['title']];
                         $msg = array('msg' => 'Wine updated successfully.', 'success' => true, 'error' => false, 'data' => $data);
@@ -672,7 +672,7 @@ class ServicesController extends AppController {
         $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true);
         $user = $this->Users->get($user_id);
         
-        if(empty($user)){
+        if(!$this->Users->exists(['id' => $id])){
             $msg = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
         }
         
