@@ -684,11 +684,10 @@ class ServicesController extends AppController {
                     $user->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
                 }
                 if ($this->Users->save($user)) {
-                    $this->Flash->success(__('The user has been saved.'));
                     $user = $this->Users->get($user_id);
                     $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
                 } else {
-                    $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
+                    $msg = array('msg' => 'User profile could not been updated. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
                 }
             }
         }
@@ -700,20 +699,29 @@ class ServicesController extends AppController {
         $this->loadModel('Users');
         $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true);
         
-        if(!$this->Users->exists(['id' => $id])){
+        if(!$this->Users->exists(['id' => $user_id])){
             $msg = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
         }else{        
             if ($this->request->is('post')) {
-                $user = $this->Users->get($user_id);
-                $user = $this->Users->patchEntity($user, $this->request->data);
-                debug($user);die;
-                if ($this->Users->save($user)) {
-                    $this->Flash->success(__('The password has been saved.'));
+                if(empty($this->request->data['current_password']) || empty($this->request->data['password'])){
+                    $msg = array('msg' => 'Empty fields. Please try again.', 'success' => false, 'error' => true);
+                }else{
                     $user = $this->Users->get($user_id);
-                    $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
-                } else {
-                    $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
+                    $obj = new DefaultPasswordHasher;
+                    if($obj->check($this->request->data['current_password'], $user->password)){
+                        $user = $this->Users->patchEntity($user, $this->request->data);
+                        if ($this->Users->save($user)) {
+                            $user = $this->Users->get($user_id);
+                            $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
+                        }
+                        else{
+                            $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
+                        }
+                    }else{
+                        $msg = array('msg' => 'Old Password did not matched. Please try again.', 'success' => false, 'error' => true);
+                    }
                 }
+                
             }
         }
         echo json_encode($msg);
