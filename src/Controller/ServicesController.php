@@ -6,6 +6,7 @@ use Cake\Datasource\ConnectionManager;
 use Cake\Event\Event;
 use Cake\Mailer\Email;
 use Cake\Routing\Router;
+use Cake\Auth\DefaultPasswordHasher;
 
 /**
  * Categories Controller
@@ -22,7 +23,7 @@ class ServicesController extends AppController {
     public function beforeFilter(Event $event) {
         parent::beforeFilter($event);
         $this->viewBuilder()->layout('json');
-        $this->Auth->allow(['login', 'signup', 'forgotpassword', 'changepassword', 'checkemail',
+        $this->Auth->allow(['login', 'signup', 'forgotpassword', 'changepassword', 'checkemail', 'updatepassword',
             'getcategories',
             'getingrdients','addingredient', 'deletewine', '__listwine',
             'createwine', '__getwinelist', 'getwinelist', 'listwine', 'updatewine', 'searchwine',
@@ -671,7 +672,7 @@ class ServicesController extends AppController {
         $this->loadModel('Users');
         $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true);
         
-        if(!$this->Users->exists(['id' => $id])){
+        if(!$this->Users->exists(['id' => $user_id])){
             $msg = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
         }else{        
             if ($this->request->is('post')) {
@@ -684,6 +685,30 @@ class ServicesController extends AppController {
                 }
                 if ($this->Users->save($user)) {
                     $this->Flash->success(__('The user has been saved.'));
+                    $user = $this->Users->get($user_id);
+                    $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
+                } else {
+                    $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
+                }
+            }
+        }
+        echo json_encode($msg);
+        die;
+    }
+    
+    public function updatepassword($user_id){
+        $this->loadModel('Users');
+        $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true);
+        
+        if(!$this->Users->exists(['id' => $id])){
+            $msg = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
+        }else{        
+            if ($this->request->is('post')) {
+                $user = $this->Users->get($user_id);
+                $user = $this->Users->patchEntity($user, $this->request->data);
+                debug($user);die;
+                if ($this->Users->save($user)) {
+                    $this->Flash->success(__('The password has been saved.'));
                     $user = $this->Users->get($user_id);
                     $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
                 } else {
