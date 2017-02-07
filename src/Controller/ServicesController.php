@@ -659,7 +659,7 @@ class ServicesController extends AppController {
         $this->loadModel('Users');
         if(empty($user_id)){
             $user = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
-        }else if(!$this->Users->exists(['id' => $id])){
+        }else if(!$this->Users->exists(['id' => $user_id])){
             $user = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
         }else{
             $user = $this->Users->get($user_id);
