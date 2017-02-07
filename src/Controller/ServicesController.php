@@ -357,7 +357,6 @@ class ServicesController extends AppController {
                 }, 
                 'WineIngredients.Ingredients' => function($q){
                     return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
-                         //   ->where();
                 },
                 'WineIngredients.Ingredients.Categories' => function($q){
                     return $q->select(['id', 'title']);
@@ -377,6 +376,32 @@ class ServicesController extends AppController {
         return $winelist;
     }
     
+    public function __searchwine($key = NULL, $user_id = NULL, $order = 'Wines.title', $limit= 250) {
+        $connection = ConnectionManager::get('default');
+        $query = "SELECT Wines.id "
+                . "FROM wines Wines "
+                . "LEFT JOIN wine_ingredients WI ON WI.wine_id = Wines.id "
+                . "LEFT JOIN ingredients I on WI.ingredient_id = I.id "
+                . "WHERE Wines.title LIKE '%" . $key . "%' "
+                . "OR I.title LIKE '%" . $key . "%' "
+                . "GROUP BY Wines.id ";
+        if(!empty($user_id)){
+            $query .= "AND Wines.user_id =" . $user_id ." ";
+        }
+        if(!empty($order)){
+            $query .= "ORDER BY ".$order." ";
+        }
+        $winelist = $connection->execute($query)->fetchAll('assoc');
+        $wines = [];
+        if(!empty($winelist)){
+            foreach($winelist as $i => $wine){
+                $wines[] = $wine['id'];
+            }
+        }        
+        return $wines;
+        
+    }
+    
     public function listwine($user_id = NULL, $type = 'global', $key = NULL) {
         $this->loadModel('Wines');
         $conditions = $winelist = array();
@@ -394,8 +419,11 @@ class ServicesController extends AppController {
                 $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
             case 'search':
-                $conditions['Wines.title LIKE'] = '%'.$key.'%';
-                $winelist = $this->__listingwine($user_id, $conditions, $order);
+                $winelist = $this->__searchwine($key);
+                if(!empty($winelist)){                
+                    $conditions = array(['Wines.id IN' => $winelist]);
+                    $winelist = $this->__listingwine($user_id, $conditions, $order);
+                }                
                 break;
             case 'faviorate':
                 $faviorateWines = array();
