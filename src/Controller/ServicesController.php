@@ -318,6 +318,35 @@ class ServicesController extends AppController {
         die;
     }
     
+//    public function __listingwine($user_id = NULL, $conditions = [], $order = [], $limit= 250) {
+//        $this->loadModel('Wines');
+//        $winelist = $this->Wines->find()
+//                ->where($conditions)
+//                ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
+//                ->contain(['WineIngredients' => function($q){
+//                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
+//                }, 
+//                'WineIngredients.Ingredients' => function($q){
+//                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
+//                },
+//                'WineIngredients.Ingredients.Categories' => function($q){
+//                    return $q->select(['id', 'title']);
+//                },
+//                'FaviorateWines' =>function($q) use ($user_id){
+//                    return $q->select(['id', 'wine_id'])
+//                            ->where(['FaviorateWines.user_id' => $user_id]);
+//                }
+//                ])
+//                ->limit($limit)
+//                ->order($order)
+//                ->toArray();
+//        foreach($winelist as $i => $wine){
+//            $winelist[$i]['isFav'] = !empty($wine['faviorate_wines']);
+//            unset($winelist[$i]['faviorate_wines']);
+//        }        
+//        return $winelist;
+//    }
+    
     public function __listingwine($user_id = NULL, $conditions = [], $order = [], $limit= 250) {
         $this->loadModel('Wines');
         $winelist = $this->Wines->find()
@@ -328,6 +357,7 @@ class ServicesController extends AppController {
                 }, 
                 'WineIngredients.Ingredients' => function($q){
                     return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
+                         //   ->where();
                 },
                 'WineIngredients.Ingredients.Categories' => function($q){
                     return $q->select(['id', 'title']);
@@ -492,25 +522,29 @@ class ServicesController extends AppController {
 //        die;
 //    }
     
-    public function deletewine(){
+    public function deletewine($wine_id){
         $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true);
-        if ($this->request->is('post')) {
-            $this->loadModel('Wines');
-            $wine_id = $this->request->data['wine_id'];            
-            if(!$this->Wines->exists(['id' => $wine_id])){
-                $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
-            }
-            else{
-                $wine = $this->Wines->get($wine_id);
-                if ($this->Wines->delete($wine)) {
-                    $this->loadModel('FaviorateWines');
-                    $favWines = $this->FaviorateWines->deleteAll(['FaviorateWines.wine_id' => $wine_id]);                    
-                    $msg = array('msg' => 'Wine deleted successfully.', 'success' => true, 'error' => false);
-                } else {
-                    $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+        if(!empty($wine_id)){
+            if ($this->request->is('post')) {
+                $this->loadModel('Wines');          
+                if(!$this->Wines->exists(['id' => $wine_id])){
+                    $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
+                }
+                else{
+                    $wine = $this->Wines->get($wine_id);
+                    if ($this->Wines->delete($wine)) {
+                        $this->loadModel('FaviorateWines');
+                        $favWines = $this->FaviorateWines->deleteAll(['FaviorateWines.wine_id' => $wine_id]);                    
+                        $msg = array('msg' => 'Wine deleted successfully.', 'success' => true, 'error' => false);
+                    } else {
+                        $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
+                    }
                 }
             }
+        }else{
+            $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
         }
+        
         echo json_encode($msg);
         die;
     }
