@@ -65,7 +65,7 @@ class ServicesController extends AppController {
         $user = $this->Users->newEntity();
         if ($this->request->is('post')) {
             $user = $this->Users->patchEntity($user, $this->request->data);
-            if(empty($user->username) || empty($user->password) || empty($user->name)){
+            if(empty($user->username) || empty($user->password) || empty($user->email)){
                 $msg = array('msg' => 'Missing data.', 'success' => false, 'error' => true);
             }
             else{
@@ -658,11 +658,11 @@ class ServicesController extends AppController {
         $this->loadModel('Users');
         if(empty($user_id)){
             $user = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
-        }
-        $user = $this->Users->get($user_id);
-        if(empty($user)){
+        }else if(!$this->Users->exists(['id' => $id])){
             $user = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
-        }       
+        }else{
+            $user = $this->Users->get($user_id);
+        }        
         echo json_encode($user);
         die;
     }
@@ -670,25 +670,25 @@ class ServicesController extends AppController {
     public function updateprofile($user_id){
         $this->loadModel('Users');
         $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true);
-        $user = $this->Users->get($user_id);
         
         if(!$this->Users->exists(['id' => $id])){
             $msg = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
-        }
-        
-        if ($this->request->is('post')) {
-            $user = $this->Users->patchEntity($user, $this->request->data);
-            if(isset($user->photo['name'])){
-                $ext = pathinfo($user->photo['name'], PATHINFO_EXTENSION);
-                $filename = basename($user->photo['name'], ".$ext");
-                $user->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
-            }
-            if ($this->Users->save($user)) {
-                $this->Flash->success(__('The user has been saved.'));
+        }else{        
+            if ($this->request->is('post')) {
                 $user = $this->Users->get($user_id);
-                $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
-            } else {
-                $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
+                $user = $this->Users->patchEntity($user, $this->request->data);
+                if(isset($user->photo['name'])){
+                    $ext = pathinfo($user->photo['name'], PATHINFO_EXTENSION);
+                    $filename = basename($user->photo['name'], ".$ext");
+                    $user->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+                }
+                if ($this->Users->save($user)) {
+                    $this->Flash->success(__('The user has been saved.'));
+                    $user = $this->Users->get($user_id);
+                    $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
+                } else {
+                    $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
+                }
             }
         }
         echo json_encode($msg);
