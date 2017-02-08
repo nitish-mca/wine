@@ -46,6 +46,8 @@ class ServicesController extends AppController {
                     'email' => $user['email'],
                     'phone' => $user['phone'],
                     'skype' => $user['skype'],
+                    'photo' => $user['photo'],
+                    'dir' => $user['dir'],
                     'address' => $user['address'],
                     'state' => $user['state'],
                     'country' => $user['country'],
