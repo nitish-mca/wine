@@ -414,7 +414,7 @@ class ServicesController extends AppController {
                 $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
             case 'recent':
-                $order = ['Wines.id DESC'];
+                //$order = ['Wines.id DESC'];
                 $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
             case 'self':
