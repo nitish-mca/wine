@@ -556,22 +556,25 @@ class ServicesController extends AppController {
     public function deletewine($wine_id){
         $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true);
         if(!empty($wine_id)){
-            if ($this->request->is('post')) {
-                $this->loadModel('Wines');          
-                if(!$this->Wines->exists(['id' => $wine_id])){
-                    $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
-                }
-                else{
-                    $wine = $this->Wines->get($wine_id);
-                    if ($this->Wines->delete($wine)) {
-                        $this->loadModel('FaviorateWines');
-                        $favWines = $this->FaviorateWines->deleteAll(['FaviorateWines.wine_id' => $wine_id]);                    
-                        $msg = array('msg' => 'Wine deleted successfully.', 'success' => true, 'error' => false);
-                    } else {
-                        $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
-                    }
+            $this->loadModel('Wines');          
+            if(!$this->Wines->exists(['id' => $wine_id])){
+                $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
+            }
+            else{
+                $wine = $this->Wines->get($wine_id);
+                $this->loadModel('FaviorateWines');
+                $favWines = $this->FaviorateWines->deleteAll(['FaviorateWines.wine_id' => $wine_id]);
+
+                $this->loadModel('WineIngredients');
+                $wineIngs = $this->WineIngredients->deleteAll(['WineIngredients.wine_id' => $wine_id]);
+
+                if ($this->Wines->delete($wine)) {                       
+                    $msg = array('msg' => 'Wine deleted successfully.', 'success' => true, 'error' => false);
+                } else {
+                    $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
                 }
             }
+            
         }else{
             $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
         }
