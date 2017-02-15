@@ -25,7 +25,7 @@ class ServicesController extends AppController {
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'forgotpassword', 'changepassword', 'checkemail', 'updatepassword',
             'getcategories',
-            'getingrdients','addingredient', 'deletewine', '__listwine',
+            'getingrdients','addingredient', 'deleteingredient','deletewine', '__listwine',
             'createwine', '__getwinelist', 'getwinelist', 'listwine', 'updatewine', 'searchwine',
             'addfaviorate', 'listfaviorate', 'removefaviorate', 
             'getrecentlist',
@@ -579,6 +579,34 @@ class ServicesController extends AppController {
             
         }else{
             $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
+        }
+        
+        echo json_encode($msg);
+        die;
+    }
+    
+    public function deleteingredient($ingredient_id){
+        $msg = array('msg' => 'Ingredient could not be deleted. Please try again.', 'success' => false, 'error' => true);
+        if(!empty($ingredient_id)){
+            $this->loadModel('Ingredients');          
+            if(!$this->Ingredients->exists(['id' => $ingredient_id])){
+                $msg = array('msg' => 'Ingredient not found. Please try again.', 'success' => false, 'error' => true);
+            }
+            else{
+                $ingredient = $this->Ingredients->get($ingredient_id);
+                $this->loadModel('WineIngredients');
+                $wineIngs = $this->WineIngredients->deleteAll(['WineIngredients.ingredient_id' => $ingredient_id]);
+
+                if ($this->Ingredients->delete($ingredient)) {                       
+                    $msg = array('msg' => 'Ingredient deleted successfully.', 'success' => true, 'error' => false);
+                } else {
+                    $msg = array('msg' => 'Ingredient could not be deleted. Please try again.', 'success' => false, 
+                        'error' => true, 'error_data' => $ingredient->errors());
+                }
+            }
+            
+        }else{
+            $msg = array('msg' => 'Ingredient not found. Please try again.', 'success' => false, 'error' => true);
         }
         
         echo json_encode($msg);
