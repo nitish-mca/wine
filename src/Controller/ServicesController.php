@@ -586,6 +586,17 @@ class ServicesController extends AppController {
     }
     
     public function deleteingredient($ingredient_id){
+        
+//        $query = $this->Categories->find();
+//                $query->select(['Categories.id', 'total' => $query->func()->count('Ingredients.id')])
+//                        ->matching('Ingredients')
+//                        ->group(['Categories.id']);
+//                       
+//                $category = $query->all()->toList();
+//                
+//                debug($category);die;
+        
+        
         $msg = array('msg' => 'Ingredient could not be deleted. Please try again.', 'success' => false, 'error' => true);
         if(!empty($ingredient_id)){
             $this->loadModel('Ingredients');          
@@ -596,8 +607,23 @@ class ServicesController extends AppController {
                 $ingredient = $this->Ingredients->get($ingredient_id);
                 $this->loadModel('WineIngredients');
                 $wineIngs = $this->WineIngredients->deleteAll(['WineIngredients.ingredient_id' => $ingredient_id]);
-
-                if ($this->Ingredients->delete($ingredient)) {                       
+                $category_id = $ingredient->category_id;
+                
+                if ($this->Ingredients->delete($ingredient)) {
+                    $categoryData = $this->Ingredients->Categories->find()
+                        ->select('id')
+                        ->contain(['Ingredients' => function ($q) {
+                                return $q
+                                    ->select(['Ingredients.category_id', 'total' => $q->func()->count('Ingredients.id')])
+                                        ->group(['Ingredients.category_id']);                       
+                                    }
+                                ])
+                        ->where(['id' => $category_id])
+                        ->first();
+                   if(empty($categoryData->ingredients)){
+                        $category = $this->Ingredients->Categories->get($categoryData->id);
+                        $this->Ingredients->Categories->delete($category);
+                   }
                     $msg = array('msg' => 'Ingredient deleted successfully.', 'success' => true, 'error' => false);
                 } else {
                     $msg = array('msg' => 'Ingredient could not be deleted. Please try again.', 'success' => false, 
