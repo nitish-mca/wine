@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller;
 
 use App\Controller\AppController;
@@ -25,12 +26,12 @@ class ServicesController extends AppController {
         $this->viewBuilder()->layout('json');
         $this->Auth->allow(['login', 'signup', 'forgotpassword', 'changepassword', 'checkemail', 'updatepassword',
             'getcategories',
-            'getingrdients','addingredient', 'deleteingredient','deletewine', '__listwine',
+            'getingrdients', 'addingredient', 'deleteingredient', 'deletewine', '__listwine', 'searchingredients',
             'createwine', '__getwinelist', 'getwinelist', 'listwine', 'updatewine', 'searchwine',
-            'addfaviorate', 'listfaviorate', 'removefaviorate', 
+            'addfaviorate', 'listfaviorate', 'removefaviorate',
             'getrecentlist',
             'getprofile', 'updateprofile'
-            ]);
+        ]);
     }
 
     public function login() {
@@ -53,7 +54,7 @@ class ServicesController extends AppController {
                     'country' => $user['country'],
                     'last_login' => $user['last_login']
                 ];
-                $msg = array('msg' => 'Login Successful.', 'success' => true, 'data' => $data['User'],'error' => false);
+                $msg = array('msg' => 'Login Successful.', 'success' => true, 'data' => $data['User'], 'error' => false);
             } else {
                 $msg = array('msg' => 'Login Failed. Wrong Username or Password', 'success' => false, 'error' => true);
             }
@@ -68,10 +69,9 @@ class ServicesController extends AppController {
         $user = $this->Users->newEntity();
         if ($this->request->is('post')) {
             $user = $this->Users->patchEntity($user, $this->request->data);
-            if(empty($user->username) || empty($user->password) || empty($user->email)){
+            if (empty($user->username) || empty($user->password) || empty($user->email)) {
                 $msg = array('msg' => 'Missing data.', 'success' => false, 'error' => true);
-            }
-            else{
+            } else {
                 if ($this->Users->save($user)) {
                     $data = [
                         'id' => $user['id'],
@@ -95,7 +95,7 @@ class ServicesController extends AppController {
         die;
     }
 
-    public function forgotpassword()    {
+    public function forgotpassword() {
         $msg = array('msg' => 'Please enter username.', 'success' => false, 'error' => true);
         $this->loadModel('Users');
         if ($this->request->is(['patch', 'post', 'put'])) {
@@ -185,7 +185,7 @@ class ServicesController extends AppController {
     public function getcategories($id = NULL) {
         $this->loadModel('Categories');
         $conditions = array();
-        
+
         if (!empty($id)) {
             $conditions['Categories.id'] = $id;
         }
@@ -193,12 +193,12 @@ class ServicesController extends AppController {
         $categories = $this->Categories->find()
                 ->select(['id', 'title'])
                 ->contain(['Ingredients' => function($q) {
-                        return $q->select(['id','title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
+                        return $q->select(['id', 'title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion", "cost_of_portion"]);
                     }])
                 ->where($conditions)
                 ->limit(250)
                 ->order('Categories.id ASC')
-                ->toArray();        
+                ->toArray();
         echo json_encode($categories);
         die;
     }
@@ -206,7 +206,7 @@ class ServicesController extends AppController {
     public function getingrdients($category_id = null) {
         $this->loadModel('Ingredients');
         $conditions = array();
-        
+
         if (!empty($category_id)) {
             $conditions['Ingredients.category_id'] = $category_id;
         }
@@ -219,19 +219,49 @@ class ServicesController extends AppController {
                         return $q->select(['id', 'title']);
                     }])
                 ->order('Ingredients.id');
-        
+
         echo json_encode($ingredients);
         die;
     }
-    
-    public function addingredient(){
+
+    public function searchingredients($key = NULL, $type = 'search', $user_id = NULL) {
+        $this->loadModel('Ingredients');
+        $conditions = $list = array();
+        $order = ['Ingredients.title ASC'];
+        switch ($type) {
+            case 'global':
+                $winelist = $this->__listingwine($user_id, $conditions, $order);
+                break;
+            case 'recent':
+                //$order = ['Wines.id DESC'];
+                $winelist = $this->__listingwine($user_id, $conditions, $order);
+                break;
+            case 'self':
+                $conditions['Wines.user_id'] = $user_id;
+                $winelist = $this->__listingwine($user_id, $conditions, $order);
+                break;
+            case 'search':
+                $list = $this->Ingredients->find()
+                        ->where(['Ingredients.title Like ' => "%$key%"])
+                        ->select(['id', 'title', 'category_id', 'size', 'uom', "cost", "ml", "cl", "ltr", "oz", "pt", "portion",
+                            "cost_of_portion",])
+                        ->contain(['Categories' => function ($q) {
+                        return $q->select(['id', 'title']);
+                    }]);
+                break;
+        }
+        echo json_encode($list);
+        die;
+    }
+
+    public function addingredient() {
         $this->loadModel('Ingredients');
         $msg = array('msg' => 'Ingredients could not been added. Please try again.', 'success' => false, 'error' => true);
         if ($this->request->is('post')) {
             $ingredient = $this->Ingredients->newEntity($this->request->data, ['associated' => ['Categories']]);
-            if(empty($ingredient->title)){
+            if (empty($ingredient->title)) {
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
-            }else{
+            } else {
                 if ($this->Ingredients->save($ingredient)) {
                     $data = [
                         'id' => $ingredient['id'],
@@ -242,8 +272,8 @@ class ServicesController extends AppController {
                         'category_id' => $ingredient['category_id'],
                         'category' => [
                             'id' => $ingredient['category']->id,
-                            'title' => $ingredient['category']-> title
-                        ]   
+                            'title' => $ingredient['category']->title
+                        ]
                     ];
 
                     $msg = array('msg' => 'Ingredient created successfully.', 'success' => true, 'error' => false, 'data' => $data);
@@ -256,22 +286,21 @@ class ServicesController extends AppController {
         echo json_encode($msg);
         die;
     }
-       
-    public function createwine()    {
+
+    public function createwine() {
         $this->loadModel('Wines');
         $msg = array('msg' => 'Wine could not been created. Please try again.', 'success' => false, 'error' => true);
         if ($this->request->is('post')) {
             $wine = $this->Wines->newEntity($this->request->data, ['associated' => ['WineIngredients']]);
-            if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
+            if (empty($wine->title) || empty($wine->description) || empty($wine->user_id)) {
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
-            }
-            else{
-                $wine->status = 1;            
-                if(isset($wine->photo['name'])){
+            } else {
+                $wine->status = 1;
+                if (isset($wine->photo['name'])) {
                     $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
                     $filename = basename($wine->photo['name'], ".$ext");
-                    $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
-                }            
+                    $wine->photo['name'] = md5($filename) . '_' . rand(1, 1000) . '.' . $ext;
+                }
                 if ($this->Wines->save($wine)) {
                     $data = ['id' => $wine['id'], 'title' => $wine['title']];
                     $msg = array('msg' => 'Wine created successfully.', 'success' => true, 'error' => false, 'data' => $data);
@@ -284,33 +313,33 @@ class ServicesController extends AppController {
         echo json_encode($msg);
         die;
     }
-    
+
     public function __getwinelist($conditions = [], $order = []) {
         $this->loadModel('Wines');
         $user_id = 1;
         $winelist = $this->Wines->find()
                 ->where($conditions)
-                ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
-                ->contain(['WineIngredients' => function($q){
-                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'unit', 'cost']);
-                }, 
-                'WineIngredients.Ingredients' => function($q){
-                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
-                },
-                'WineIngredients.Ingredients.Categories' => function($q){
-                    return $q->select(['id', 'title']);
-                },
-                'FaviorateWines' =>function($q) use ($user_id){
-                    return $q->select(['id', 'wine_id'])
-                            ->where(['FaviorateWines.user_id' => $user_id]);
-                }
+                ->select(['id', 'title', 'description', 'photo', 'dir', 'user_id', 'isTax', 'taxValue', 'total_cost'])
+                ->contain(['WineIngredients' => function($q) {
+                        return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'unit', 'cost']);
+                    },
+                            'WineIngredients.Ingredients' => function($q) {
+                        return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
+                    },
+                            'WineIngredients.Ingredients.Categories' => function($q) {
+                        return $q->select(['id', 'title']);
+                    },
+                            'FaviorateWines' => function($q) use ($user_id) {
+                        return $q->select(['id', 'wine_id'])
+                                ->where(['FaviorateWines.user_id' => $user_id]);
+                    }
                 ])
                 ->limit(250)
                 ->order($order);
 
         return $winelist;
     }
-    
+
     public function getwinelist() {
         $this->loadModel('Wines');
         $conditions = array();
@@ -320,12 +349,12 @@ class ServicesController extends AppController {
         echo json_encode($winelist);
         die;
     }
-    
+
 //    public function __listingwine($user_id = NULL, $conditions = [], $order = [], $limit= 250) {
 //        $this->loadModel('Wines');
 //        $winelist = $this->Wines->find()
 //                ->where($conditions)
-//                ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
+//                ->select(['id','title', 'description', 'photo', 'dir', 'user_id', 'isTax', 'taxValue', 'total_cost'])
 //                ->contain(['WineIngredients' => function($q){
 //                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'cost']);
 //                }, 
@@ -349,37 +378,37 @@ class ServicesController extends AppController {
 //        }        
 //        return $winelist;
 //    }
-    
-    public function __listingwine($user_id = NULL, $conditions = [], $order = [], $limit= 250) {
+
+    public function __listingwine($user_id = NULL, $conditions = [], $order = [], $limit = 250) {
         $this->loadModel('Wines');
         $winelist = $this->Wines->find()
                 ->where($conditions)
-                ->select(['id','title', 'description', 'photo', 'dir', 'user_id'])
-                ->contain(['WineIngredients' => function($q){
-                    return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'unit', 'cost']);
-                }, 
-                'WineIngredients.Ingredients' => function($q){
-                    return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
-                },
-                'WineIngredients.Ingredients.Categories' => function($q){
-                    return $q->select(['id', 'title']);
-                },
-                'FaviorateWines' =>function($q) use ($user_id){
-                    return $q->select(['id', 'wine_id'])
-                            ->where(['FaviorateWines.user_id' => $user_id]);
-                }
+                ->select(['id', 'title', 'description', 'photo', 'dir', 'user_id', 'isTax', 'taxValue', 'total_cost'])
+                ->contain(['WineIngredients' => function($q) {
+                        return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'unit', 'cost']);
+                    },
+                            'WineIngredients.Ingredients' => function($q) {
+                        return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
+                    },
+                            'WineIngredients.Ingredients.Categories' => function($q) {
+                        return $q->select(['id', 'title']);
+                    },
+                            'FaviorateWines' => function($q) use ($user_id) {
+                        return $q->select(['id', 'wine_id'])
+                                ->where(['FaviorateWines.user_id' => $user_id]);
+                    }
                 ])
                 ->limit($limit)
                 ->order($order)
                 ->toArray();
-        foreach($winelist as $i => $wine){
+        foreach ($winelist as $i => $wine) {
             $winelist[$i]['isFav'] = !empty($wine['faviorate_wines']);
             unset($winelist[$i]['faviorate_wines']);
-        }        
+        }
         return $winelist;
     }
-    
-    public function __searchwine($key = NULL, $user_id = NULL, $order = 'Wines.title', $limit= 250) {
+
+    public function __searchwine($key = NULL, $user_id = NULL, $order = 'Wines.title', $limit = 250) {
         $connection = ConnectionManager::get('default');
         $query = "SELECT Wines.id "
                 . "FROM wines Wines "
@@ -388,28 +417,27 @@ class ServicesController extends AppController {
                 . "WHERE Wines.title LIKE '%" . $key . "%' "
                 . "OR I.title LIKE '%" . $key . "%' "
                 . "GROUP BY Wines.id ";
-        if(!empty($user_id)){
-            $query .= "AND Wines.user_id =" . $user_id ." ";
+        if (!empty($user_id)) {
+            $query .= "AND Wines.user_id =" . $user_id . " ";
         }
-        if(!empty($order)){
-            $query .= "ORDER BY ".$order." ";
+        if (!empty($order)) {
+            $query .= "ORDER BY " . $order . " ";
         }
         $winelist = $connection->execute($query)->fetchAll('assoc');
         $wines = [];
-        if(!empty($winelist)){
-            foreach($winelist as $i => $wine){
+        if (!empty($winelist)) {
+            foreach ($winelist as $i => $wine) {
                 $wines[] = $wine['id'];
             }
-        }        
+        }
         return $wines;
-        
     }
-    
+
     public function listwine($user_id = NULL, $type = 'global', $key = NULL) {
         $this->loadModel('Wines');
         $conditions = $winelist = array();
-        $order = ['Wines.title ASC'];        
-        switch ($type){
+        $order = ['Wines.title ASC'];
+        switch ($type) {
             case 'global':
                 $winelist = $this->__listingwine($user_id, $conditions, $order);
                 break;
@@ -423,44 +451,44 @@ class ServicesController extends AppController {
                 break;
             case 'search':
                 $winelist = $this->__searchwine($key);
-                if(!empty($winelist)){                
+                if (!empty($winelist)) {
                     $conditions = array(['Wines.id IN' => $winelist]);
                     $winelist = $this->__listingwine($user_id, $conditions, $order);
-                }                
+                }
                 break;
             case 'faviorate':
                 $faviorateWines = array();
-                $faviorateWines = $this->Wines->FaviorateWines->find('list',['valueField' => 'wine_id'])
-                    ->where(['FaviorateWines.user_id' => $user_id])
-                    ->toArray();
-                if(!empty($faviorateWines)){                
+                $faviorateWines = $this->Wines->FaviorateWines->find('list', ['valueField' => 'wine_id'])
+                        ->where(['FaviorateWines.user_id' => $user_id])
+                        ->toArray();
+                if (!empty($faviorateWines)) {
                     $conditions = array(['Wines.id IN' => $faviorateWines]);
                     $winelist = $this->__listingwine($user_id, $conditions, $order);
                 }
                 break;
-        }         
+        }
         echo json_encode($winelist);
         die;
     }
-    
+
     public function updatewine($id) {
         $msg = array('msg' => 'Wine could not been updated. Please try again.', 'success' => false, 'error' => true);
-        if(empty($id)){
+        if (empty($id)) {
             $msg = array('msg' => 'Invalid Wine. Please try again.', 'success' => false, 'error' => true);
         }
-        
+
         $this->loadModel('Wines');
-        if($this->Wines->exists(['id' => $id])){
+        if ($this->Wines->exists(['id' => $id])) {
             $wineData = $this->Wines->get($id, ['contain' => ['WineIngredients']]);
             if ($this->request->is('post')) {
                 $wine = $this->Wines->patchEntity($wineData, $this->request->data);
-                if(empty($wine->title) || empty($wine->description) || empty($wine->user_id)){
+                if (empty($wine->title) || empty($wine->description) || empty($wine->user_id)) {
                     $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
-                } else{                
-                    if(isset($wine->photo['name'])){
+                } else {
+                    if (isset($wine->photo['name'])) {
                         $ext = pathinfo($wine->photo['name'], PATHINFO_EXTENSION);
                         $filename = basename($wine->photo['name'], ".$ext");
-                        $wine->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+                        $wine->photo['name'] = md5($filename) . '_' . rand(1, 1000) . '.' . $ext;
                     }
                     $this->loadModel('WineIngredients');
                     $favWines = $this->WineIngredients->deleteAll(['WineIngredients.wine_id' => $id]);
@@ -472,13 +500,13 @@ class ServicesController extends AppController {
                     }
                 }
             }
-        }else{
+        } else {
             $msg = array('msg' => 'Invalid Wine. Please try again.', 'success' => false, 'error' => true);
         }
         echo json_encode($msg);
         die;
     }
-    
+
 //    public function updatewine($id) {
 //        $msg = array('msg' => 'Wine could not been updated. Please try again.', 'success' => false, 'error' => true);
 //        if(empty($id)){
@@ -520,7 +548,6 @@ class ServicesController extends AppController {
 //        echo json_encode($msg);
 //        die;
 //    }
-    
 //    public function deletewine(){
 //        //$wine_id , $user_id
 //        $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true);
@@ -554,15 +581,14 @@ class ServicesController extends AppController {
 //        echo json_encode($msg);
 //        die;
 //    }
-    
-    public function deletewine($wine_id){
+
+    public function deletewine($wine_id) {
         $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true);
-        if(!empty($wine_id)){
-            $this->loadModel('Wines');          
-            if(!$this->Wines->exists(['id' => $wine_id])){
+        if (!empty($wine_id)) {
+            $this->loadModel('Wines');
+            if (!$this->Wines->exists(['id' => $wine_id])) {
                 $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
-            }
-            else{
+            } else {
                 $wine = $this->Wines->get($wine_id);
                 $this->loadModel('FaviorateWines');
                 $favWines = $this->FaviorateWines->deleteAll(['FaviorateWines.wine_id' => $wine_id]);
@@ -570,92 +596,79 @@ class ServicesController extends AppController {
                 $this->loadModel('WineIngredients');
                 $wineIngs = $this->WineIngredients->deleteAll(['WineIngredients.wine_id' => $wine_id]);
 
-                if ($this->Wines->delete($wine)) {                       
+                if ($this->Wines->delete($wine)) {
                     $msg = array('msg' => 'Wine deleted successfully.', 'success' => true, 'error' => false);
                 } else {
                     $msg = array('msg' => 'Wine could not be deleted. Please try again.', 'success' => false, 'error' => true, 'error_data' => $wine->errors());
                 }
             }
-            
-        }else{
+        } else {
             $msg = array('msg' => 'Wine not found. Please try again.', 'success' => false, 'error' => true);
         }
-        
+
         echo json_encode($msg);
         die;
     }
-    
-    public function deleteingredient($ingredient_id){
-        
-//        $query = $this->Categories->find();
-//                $query->select(['Categories.id', 'total' => $query->func()->count('Ingredients.id')])
-//                        ->matching('Ingredients')
-//                        ->group(['Categories.id']);
-//                       
-//                $category = $query->all()->toList();
-//                
-//                debug($category);die;
-        
-        
-        $msg = array('msg' => 'Ingredient could not be deleted. Please try again.', 'success' => false, 'error' => true);
-        if(!empty($ingredient_id)){
-            $this->loadModel('Ingredients');          
-            if(!$this->Ingredients->exists(['id' => $ingredient_id])){
-                $msg = array('msg' => 'Ingredient not found. Please try again.', 'success' => false, 'error' => true);
-            }
-            else{
-                $ingredient = $this->Ingredients->get($ingredient_id);
-                $this->loadModel('WineIngredients');
-                $wineIngs = $this->WineIngredients->deleteAll(['WineIngredients.ingredient_id' => $ingredient_id]);
-                $category_id = $ingredient->category_id;
-                
-                if ($this->Ingredients->delete($ingredient)) {
-                    $categoryData = $this->Ingredients->Categories->find()
+
+    public function deleteingredient($ingredient_id) {
+
+    $msg = array('msg' => 'Ingredient could not be deleted. Please try again.', 'success' => false, 'error' => true);
+    if (!empty($ingredient_id)) {
+        $this->loadModel('Ingredients');
+        if (!$this->Ingredients->exists(['id' => $ingredient_id])) {
+            $msg = array('msg' => 'Ingredient not found. Please try again.', 'success' => false, 'error' => true);
+        } else {
+            $ingredient = $this->Ingredients->get($ingredient_id);
+            $this->loadModel('WineIngredients');
+            $wineIngs = $this->WineIngredients->deleteAll(['WineIngredients.ingredient_id' => $ingredient_id]);
+            $category_id = $ingredient->category_id;
+
+            if ($this->Ingredients->delete($ingredient)) {
+                $categoryData = $this->Ingredients->Categories->find()
                         ->select('id')
                         ->contain(['Ingredients' => function ($q) {
                                 return $q
-                                    ->select(['Ingredients.category_id', 'total' => $q->func()->count('Ingredients.id')])
-                                        ->group(['Ingredients.category_id']);                       
-                                    }
-                                ])
+                                        ->select(['Ingredients.category_id', 'total' => $q->func()->count('Ingredients.id')])
+                                        ->group(['Ingredients.category_id']);
+                            }
+                            ])
                         ->where(['id' => $category_id])
                         ->first();
-                   if(empty($categoryData->ingredients)){
+                    if (empty($categoryData->ingredients)) {
                         $category = $this->Ingredients->Categories->get($categoryData->id);
                         $this->Ingredients->Categories->delete($category);
-                   }
+                    }
                     $msg = array('msg' => 'Ingredient deleted successfully.', 'success' => true, 'error' => false);
                 } else {
-                    $msg = array('msg' => 'Ingredient could not be deleted. Please try again.', 'success' => false, 
+                    $msg = array('msg' => 'Ingredient could not be deleted. Please try again.', 'success' => false,
                         'error' => true, 'error_data' => $ingredient->errors());
                 }
             }
-            
-        }else{
+        } else {
             $msg = array('msg' => 'Ingredient not found. Please try again.', 'success' => false, 'error' => true);
         }
-        
+
         echo json_encode($msg);
         die;
     }
-    
+
     public function addfaviorate() {
         $this->loadModel('FaviorateWines');
         $msg = array('msg' => 'Faviorate wine could not been added. Please try again.', 'success' => false, 'error' => true);
         if ($this->request->is('post')) {
             $faviorateWine = $this->FaviorateWines->newEntity($this->request->data);
-            if(empty($faviorateWine->user_id) || empty($faviorateWine->wine_id)){
+            if (empty($faviorateWine->user_id) || empty($faviorateWine->wine_id)) {
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
-            }else{
+            } else {
                 $checkFaviorateWines = $this->FaviorateWines->find('list')
-                    ->where(['user_id' => $faviorateWine->user_id, 'wine_id' => $faviorateWine->wine_id])->toArray();
-               // debug($checkFaviorateWines);
-                if(!empty($checkFaviorateWines)){
+                                ->where(['user_id' => $faviorateWine->user_id, 'wine_id' => $faviorateWine->wine_id])->toArray();
+                // debug($checkFaviorateWines);
+                if (!empty($checkFaviorateWines)) {
                     $msg = array('msg' => 'Already added as faviorate.', 'success' => false, 'error' => true);
-                }else{
-                    $faviorateWine->status = 1;    
+                } else {
+                    $faviorateWine->status = 1;
                     $faviorateWine->created = date('Y-m-d H:m:s');
-                    if($this->FaviorateWines->save($faviorateWine)) {
+                    if ($this->FaviorateWines->save($faviorateWine)) {
                         $msg = array('msg' => 'Faviorate wine saved successfully.', 'success' => true, 'error' => false);
                     } else {
                         $msg = array('msg' => 'Faviorate wine could not been added. Please try again.', 'success' => false, 'error' => true, 'error-data' => $faviorateWine->errors());
@@ -666,7 +679,7 @@ class ServicesController extends AppController {
         echo json_encode($msg);
         die;
     }
-    
+
     public function listfaviorate($user_id) {
         $this->loadModel('FaviorateWines');
         $faviorateWines = $this->FaviorateWines->find('list')
@@ -675,21 +688,21 @@ class ServicesController extends AppController {
         $conditions = array(['Wines.id IN' => $faviorateWines]);
         $order = ['Wines.id DESC'];
         $data = $this->__getwinelist($conditions, $order);
-        
+
         echo json_encode($data);
         die;
     }
-    
+
     public function removefaviorate() {
         $this->loadModel('FaviorateWines');
         $msg = array('msg' => 'Faviorate wine could not been removed. Please try again.', 'success' => false, 'error' => true);
-        if ($this->request->is('post')) {   
+        if ($this->request->is('post')) {
             $faviorateWine = $this->request->data;
-            if(empty($faviorateWine['user_id']) || empty($faviorateWine['wine_id'])){
+            if (empty($faviorateWine['user_id']) || empty($faviorateWine['wine_id'])) {
                 $msg = array('msg' => 'Missing Data. Please try again.', 'success' => false, 'error' => true);
-            }else{
+            } else {
                 $conditions = array('user_id' => $faviorateWine['user_id'], 'wine_id' => $faviorateWine['wine_id']);
-                if($this->FaviorateWines->deleteAll($conditions)){
+                if ($this->FaviorateWines->deleteAll($conditions)) {
                     $msg = array('msg' => 'Faviorate wine removed successfully.', 'success' => true, 'error' => false);
                 } else {
                     $msg = array('msg' => 'Faviorate wine could not been removed. Please try again.', 'success' => false, 'error' => true);
@@ -699,13 +712,13 @@ class ServicesController extends AppController {
         echo json_encode($msg);
         die;
     }
-    
-    public function getrecentlist ($user_id = NULL) {
+
+    public function getrecentlist($user_id = NULL) {
         $this->loadModel('Wines');
         $conditions = array();
-        if(!empty($user_id)){
+        if (!empty($user_id)) {
             $conditions['Wines.user_id'] = $user_id;
-        }        
+        }
         $order = ['Wines.id DESC'];
         $winelist = [];
         $winelist = $this->__getwinelist($conditions, $order);
@@ -713,34 +726,34 @@ class ServicesController extends AppController {
         echo json_encode($winelist);
         die;
     }
-    
-    public function getprofile($user_id = NULL){
+
+    public function getprofile($user_id = NULL) {
         $this->loadModel('Users');
-        if(empty($user_id)){
+        if (empty($user_id)) {
             $user = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
-        }else if(!$this->Users->exists(['id' => $user_id])){
+        } else if (!$this->Users->exists(['id' => $user_id])) {
             $user = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
-        }else{
+        } else {
             $user = $this->Users->get($user_id);
-        }        
+        }
         echo json_encode($user);
         die;
     }
-    
-    public function updateprofile($user_id){
+
+    public function updateprofile($user_id) {
         $this->loadModel('Users');
         $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true);
-        
-        if(!$this->Users->exists(['id' => $user_id])){
+
+        if (!$this->Users->exists(['id' => $user_id])) {
             $msg = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
-        }else{        
+        } else {
             if ($this->request->is('post')) {
                 $user = $this->Users->get($user_id);
                 $user = $this->Users->patchEntity($user, $this->request->data);
-                if(isset($user->photo['name'])){
+                if (isset($user->photo['name'])) {
                     $ext = pathinfo($user->photo['name'], PATHINFO_EXTENSION);
                     $filename = basename($user->photo['name'], ".$ext");
-                    $user->photo['name'] = md5($filename).'_'.rand(1,1000).'.'.$ext;   
+                    $user->photo['name'] = md5($filename) . '_' . rand(1, 1000) . '.' . $ext;
                 }
                 if ($this->Users->save($user)) {
                     $user = $this->Users->get($user_id);
@@ -753,37 +766,36 @@ class ServicesController extends AppController {
         echo json_encode($msg);
         die;
     }
-    
-    public function updatepassword($user_id){
+
+    public function updatepassword($user_id) {
         $this->loadModel('Users');
         $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true);
-        
-        if(!$this->Users->exists(['id' => $user_id])){
+
+        if (!$this->Users->exists(['id' => $user_id])) {
             $msg = array('msg' => 'User profile could not been found. Please try again.', 'success' => false, 'error' => true);
-        }else{        
+        } else {
             if ($this->request->is('post')) {
-                if(empty($this->request->data['current_password']) || empty($this->request->data['password'])){
+                if (empty($this->request->data['current_password']) || empty($this->request->data['password'])) {
                     $msg = array('msg' => 'Empty fields. Please try again.', 'success' => false, 'error' => true);
-                }else{
+                } else {
                     $user = $this->Users->get($user_id);
                     $obj = new DefaultPasswordHasher;
-                    if($obj->check($this->request->data['current_password'], $user->password)){
+                    if ($obj->check($this->request->data['current_password'], $user->password)) {
                         $user = $this->Users->patchEntity($user, $this->request->data);
                         if ($this->Users->save($user)) {
                             $user = $this->Users->get($user_id);
                             $msg = array('msg' => 'User profile updated successfully.', 'success' => true, 'error' => false, 'data' => $user);
-                        }
-                        else{
+                        } else {
                             $msg = array('msg' => 'User profile could not been added. Please try again.', 'success' => false, 'error' => true, 'error_data' => $user->errors());
                         }
-                    }else{
+                    } else {
                         $msg = array('msg' => 'Old Password did not matched. Please try again.', 'success' => false, 'error' => true);
                     }
                 }
-                
             }
         }
         echo json_encode($msg);
         die;
     }
 }
+                                                
