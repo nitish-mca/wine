@@ -321,7 +321,7 @@ class ServicesController extends AppController {
                 ->where($conditions)
                 ->select(['id', 'title', 'description', 'photo', 'dir', 'user_id', 'isTax', 'taxValue', 'total_cost'])
                 ->contain(['WineIngredients' => function($q) {
-                        return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'unit', 'cost']);
+                        return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'unit', 'cost', 'packagesize', 'packageprice', 'packageunit']);
                     },
                             'WineIngredients.Ingredients' => function($q) {
                         return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
@@ -385,7 +385,7 @@ class ServicesController extends AppController {
                 ->where($conditions)
                 ->select(['id', 'title', 'description', 'photo', 'dir', 'user_id', 'isTax', 'taxValue', 'total_cost'])
                 ->contain(['WineIngredients' => function($q) {
-                        return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'unit', 'cost']);
+                        return $q->select(['id', 'wine_id', 'ingredient_id', 'qty', 'unit', 'cost', 'packagesize', 'packageprice', 'packageunit']);
                     },
                             'WineIngredients.Ingredients' => function($q) {
                         return $q->select(['id', 'category_id', 'title', 'size', 'uom']);
